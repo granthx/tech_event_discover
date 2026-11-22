@@ -65,18 +65,9 @@ export async function PUT(
   }
 
   const supabase = await createSupabaseSessionServerClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
 
-  if (!user) {
-    return jsonError(
-      401,
-      "UNAUTHENTICATED",
-      "Please sign in with an invited account to track events."
-    );
-  }
-
+  // Single DB round-trip: set_user_event_tracking verifies auth.uid(), eligibility,
+  // rate limit, advisory lock, and ordered tracking state table atomically in SQL.
   const { data, error } = await supabase.rpc(
     "set_user_event_tracking" as never,
     {

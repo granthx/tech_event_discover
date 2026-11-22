@@ -38,16 +38,9 @@ export default function MyEventsPage() {
     eventId: string,
     targetState: "saved" | "registered" | "none"
   ) => {
-    try {
-      await fetch(`/api/me/events/${eventId}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ state: targetState }),
-      });
-    } catch {
-      // Ignore offline error in local preview
-    }
+    const previousItems = items;
 
+    // Optimistic instant UI update
     if (targetState === "none") {
       setItems((prev) => prev.filter((i) => i.eventId !== eventId));
     } else {
@@ -56,6 +49,19 @@ export default function MyEventsPage() {
           i.eventId === eventId ? { ...i, trackingState: targetState } : i
         )
       );
+    }
+
+    try {
+      const res = await fetch(`/api/me/events/${eventId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ state: targetState }),
+      });
+      if (!res.ok) {
+        setItems(previousItems);
+      }
+    } catch {
+      setItems(previousItems);
     }
   };
 

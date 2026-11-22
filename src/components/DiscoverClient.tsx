@@ -171,6 +171,18 @@ export function DiscoverClient() {
     currentState: TrackingState | undefined
   ) => {
     const targetState = currentState === "saved" ? "none" : "saved";
+
+    // Optimistic instant UI update (reverts on error or 401)
+    setTrackingMap((prev) => {
+      const copy = { ...prev };
+      if (targetState === "none") {
+        delete copy[eventId];
+      } else {
+        copy[eventId] = targetState;
+      }
+      return copy;
+    });
+
     try {
       const res = await fetch(`/api/me/events/${eventId}`, {
         method: "PUT",
@@ -183,19 +195,29 @@ export function DiscoverClient() {
         return;
       }
 
-      if (res.ok) {
+      if (!res.ok) {
+        // Revert optimistic update on failure
         setTrackingMap((prev) => {
           const copy = { ...prev };
-          if (targetState === "none") {
-            delete copy[eventId];
+          if (currentState) {
+            copy[eventId] = currentState;
           } else {
-            copy[eventId] = targetState;
+            delete copy[eventId];
           }
           return copy;
         });
       }
     } catch {
-      // Ignore network error on save toggle
+      // Revert optimistic update on network error
+      setTrackingMap((prev) => {
+        const copy = { ...prev };
+        if (currentState) {
+          copy[eventId] = currentState;
+        } else {
+          delete copy[eventId];
+        }
+        return copy;
+      });
     }
   };
 

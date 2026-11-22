@@ -43,8 +43,12 @@ export function EventDetailActions({
   }, [eventId]);
 
   const handleSetTracking = async (nextState: "saved" | "registered" | "none") => {
+    const previousState = trackingState;
     setUpdating(true);
     setStatusMessage(null);
+    // Optimistic instant UI update
+    setTrackingState(nextState === "none" ? null : nextState);
+
     try {
       const res = await fetch(`/api/me/events/${eventId}`, {
         method: "PUT",
@@ -53,12 +57,12 @@ export function EventDetailActions({
       });
 
       if (res.status === 401) {
+        setTrackingState(previousState);
         router.push(`/sign-in?returnTo=${encodeURIComponent(`/events/${eventId}`)}`);
         return;
       }
 
       if (res.ok) {
-        setTrackingState(nextState === "none" ? null : nextState);
         setStatusMessage(
           nextState === "none"
             ? "Removed from My Events."
@@ -67,10 +71,12 @@ export function EventDetailActions({
             : "Saved to My Events."
         );
       } else {
+        setTrackingState(previousState);
         const err = (await res.json()) as { message?: string };
         setStatusMessage(err.message ?? "Could not update tracking state.");
       }
     } catch {
+      setTrackingState(previousState);
       setStatusMessage("Network error while updating tracking.");
     } finally {
       setUpdating(false);
