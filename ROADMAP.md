@@ -1,6 +1,6 @@
 # Tech Event Discover · Roadmap
 
-**[R1-MUST] Current gate:** Phase 0, Phase 1 and Phase 2 are approved by the owner. Next is Phase 2B (R1 hosted beta gate), which requires hosted staging/production deployment and the owner's R1 inputs. All hosted gate items are pending. Use sanitized records with environment, date, result and responsible reviewer.
+**[R1-MUST] Current gate:** Phase 0, Phase 1 and Phase 2 are approved by the owner. Phase 2B (R1 hosted beta gate) is in progress on staging (`https://tech-event-discover.vercel.app`, Supabase project `bnuzmwbsbmradxebynyc`, region `ap-southeast-1` / Vercel `sin1`). Staging deployment, Gmail SMTP invitation acceptance, 18+ attestation, live tracking, curator TOTP (`aal2`) draft creation + audit, CDN `MISS`→`HIT`, security headers, and Vercel WAF rule (`600/60s`) are verified on 2026-11-22. Remaining Phase 2B items: 2nd test inbox + cross-account isolation check, Turnstile production keys, lost-factor recovery drill, 12 real beta events + 3 user walkthroughs, and production project promotion. Use sanitized records with environment, date, result and responsible reviewer.
 
 ## Scope by release
 
@@ -34,7 +34,7 @@
 | R1-MUST | 0 · Documentation · approved | First commit contains only PROJECT_CONTEXT.md, ARCHITECTURE.md, AGENTS.md and ROADMAP.md. Check the commit tree, cross-document contracts, G-A1–G-A7 and outstanding owner decisions. Owner approval makes the root documents authoritative. |
 | R1-MUST | 1 · Foundation and Discover · approved | Clean CI, Auth, schema/RLS, facets, client-rendered Discover, isolated public JSON, cache, search and keyset cursor. Run the Phase 1 tests below. Staging performance on 1,000 events: SQL p95 ≤150 ms over 50 representative calls, mobile LCP ≤2.5 s in four of five runs, 320 px reflow. |
 | R1-MUST | 2 · Accounts and curation · approved | My Events, curator tools, calendar, privacy and deletion. Run the Phase 2 tests below. Check axe, manual keyboard/focus/labels and 320 px reflow against WCAG 2.2 AA. Import timed, all-day and unknown-end fixtures into Google Calendar web, Apple Calendar and Outlook web. Record dates, times, titles and links. |
-| R1-MUST | 2B · Hosted curated beta · pending | Pass all five numbered R1 checks. Public catalog and invited accounts only. |
+| R1-MUST | 2B · Hosted curated beta · in progress | Pass all five numbered R1 checks. Public catalog and invited accounts only. Staging evidence recorded 2026-11-22: deploy `70422bb`, Gmail SMTP invite + 18+ attestation, live tracking (`2` rows), curator TOTP `aal2` draft + audit (`action: create`), CDN `MISS`→`HIT`, headers, and WAF `600/60s`. |
 | R2-MUST | 3A · Reminders · pending after R1 | Worker, real SMTP/API isolation, consent, unsubscribe, webhooks, independent job monitoring and shared eligibility fixtures. Validate the retry and delivery cases below. |
 | R2-MUST | 3B · Authorized import · pending after R1 | Fixture-tested importer, curator review and one real authorized publication. Extend the curator assurance test to review. |
 | R2-MUST | 4 · Full public release · pending | Pass the five R2 checks. Open independent signup and live delivery at handoff. |
