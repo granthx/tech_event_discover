@@ -1,15 +1,36 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import type { MyEventItemView } from "@/features/account/lifecycle";
 import type { TrackingState } from "@/lib/database.types";
 
-const INITIAL_DEMO_ITEMS: MyEventItemView[] = [];
-
 export default function MyEventsPage() {
   const [activeTab, setActiveTab] = useState<TrackingState>("saved");
-  const [items, setItems] = useState<MyEventItemView[]>(INITIAL_DEMO_ITEMS);
+  const [items, setItems] = useState<MyEventItemView[]>([]);
+
+  useEffect(() => {
+    let canceled = false;
+    fetch("/api/me/events?view=my-events", {
+      method: "GET",
+      cache: "no-store",
+      credentials: "same-origin",
+    })
+      .then(async (res) => {
+        if (!res.ok) return { items: [] as MyEventItemView[] };
+        return (await res.json()) as { items: MyEventItemView[] };
+      })
+      .then((data) => {
+        if (!canceled && Array.isArray(data.items)) {
+          setItems(data.items);
+        }
+      })
+      .catch(() => {});
+
+    return () => {
+      canceled = true;
+    };
+  }, []);
 
   const filteredItems = items.filter((item) => item.trackingState === activeTab);
 

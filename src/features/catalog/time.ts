@@ -18,6 +18,8 @@ export interface EffectiveScheduleBounds {
   hasExplicitEnd: boolean;
 }
 
+const validIanaTimezoneCache = new Map<string, boolean>();
+
 export function isValidIanaTimezone(tz: string): boolean {
   if (
     !tz ||
@@ -27,10 +29,16 @@ export function isValidIanaTimezone(tz: string): boolean {
   ) {
     return false;
   }
+  const cached = validIanaTimezoneCache.get(tz);
+  if (cached !== undefined) {
+    return cached;
+  }
   try {
     Intl.DateTimeFormat("en-IN", { timeZone: tz });
+    validIanaTimezoneCache.set(tz, true);
     return true;
   } catch {
+    validIanaTimezoneCache.set(tz, false);
     return false;
   }
 }
