@@ -1,10 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import {
-  evaluateTrackingTransition,
-  trackingMutationInputSchema,
-} from "@/features/account/state";
-import { getPublicEventDetailById } from "@/features/catalog/service";
+import { trackingMutationInputSchema } from "@/features/account/state";
 import { getServerEnv } from "@/lib/env";
 import {
   jsonError,
@@ -15,10 +11,18 @@ import { createSupabaseSessionServerClient } from "@/lib/supabase/server";
 
 const eventIdSchema = z.string().uuid();
 
+interface TrackingRpcRow {
+  http_status: number;
+  error_code: string | null;
+  resulting_state: string | null;
+  was_updated: boolean;
+}
+
 /**
  * PUT /api/me/events/[id]
- * Takes { state: "saved" | "registered" | "none" } and follows the tracking state table.
- * Uses no-store.
+ * Takes { state: "saved" | "registered" | "none" } and invokes the transactional
+ * `set_user_event_tracking` SQL RPC (advisory lock, eligibility, rate limit, ordered state table).
+ * Uses private, no-store.
  */
 export async function PUT(
   request: Request,
@@ -73,30 +77,57 @@ export async function PUT(
     );
   }
 
-  const { data: existingRow } = await supabase
-    .from("user_events")
-    .select("state")
-    .eq("event_id", id)
-    .maybeSingle();
+  const { data, error } = await supabase.rpc(
+    "set_user_event_tracking" as never,
+    {
+      p_event_id: id,
+      p_state: parsedInput.data.state,
+    } as never
+  );
 
-  const detail = await getPublicEventDetailById(id);
-
-  const decision = evaluateTrackingTransition({
-    requestedState: parsedInput.data.state,
-    existingState: existingRow?.state ?? null,
-    eventStatus: detail?.status ?? "unknown",
-    isEventActive: Boolean(detail && !detail.isEnded),
-  });
-
-  if (decision.status === 409) {
-    return jsonError(409, decision.code, decision.message);
+  if (error) {
+    return jsonError(500, "INTERNAL_ERROR", "Unable to update tracking state.");
   }
-  if (decision.status === 404) {
-    return jsonError(404, decision.code, decision.message);
+
+  const row = (Array.isArray(data) ? data[0] : data) as
+    | TrackingRpcRow
+    | undefined;
+
+  if (!row) {
+    return jsonError(500, "INTERNAL_ERROR", "Empty tracking response.");
+  }
+
+  if (row.http_status === 401) {
+    return jsonError(401, "UNAUTHENTICATED", "Authentication required.");
+  }
+  if (row.http_status === 403) {
+    return jsonError(
+      403,
+      "FORBIDDEN",
+      "Your account is not eligible for tracking mutations."
+    );
+  }
+  if (row.http_status === 404) {
+    return jsonError(404, "NOT_FOUND", "Event not found or unavailable.");
+  }
+  if (row.http_status === 409) {
+    return jsonError(
+      409,
+      "EVENT_INACTIVE",
+      "Cannot track an ended or canceled event."
+    );
+  }
+  if (row.http_status === 429) {
+    return jsonError(
+      429,
+      "RATE_LIMITED",
+      "Too many tracking updates. Please wait a minute.",
+      { "Retry-After": "60" }
+    );
   }
 
   return NextResponse.json(
-    { eventId: id, state: decision.newState },
+    { eventId: id, state: row.resulting_state },
     {
       status: 200,
       headers: { "Cache-Control": "private, no-store" },
