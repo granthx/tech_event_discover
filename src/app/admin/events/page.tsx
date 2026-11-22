@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { CuratorMfaPanel } from "@/components/CuratorMfaPanel";
 import { APPROVED_SOURCES, REFERENCE_CITIES } from "@/features/catalog/fixtures";
 import type {
   CancellationReason,
@@ -116,6 +117,8 @@ export default function AdminEventsPage() {
           Every curator operation requires an active <code>curator_access</code> row and a verified TOTP (<code>aal2</code>) session.
         </p>
       </div>
+
+      <CuratorMfaPanel />
 
       {errorMessage && (
         <div
