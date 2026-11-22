@@ -10,6 +10,10 @@ function SignInContent() {
   const returnTo = validateSameOriginReturnPath(searchParams.get("returnTo"));
 
   const [email, setEmail] = useState("");
+  const [otpStep, setOtpStep] = useState<"request" | "verify">("request");
+  const [otpCode, setOtpCode] = useState("");
+  const [otpAdultConfirmed, setOtpAdultConfirmed] = useState(false);
+
   const [inviteTokenHash, setInviteTokenHash] = useState<string | null>(null);
   const [adultConfirmed, setAdultConfirmed] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -23,7 +27,8 @@ function SignInContent() {
     if (!rawHash || rawHash.length <= 1) return;
 
     const hashParams = new URLSearchParams(rawHash.slice(1));
-    const tokenHash = hashParams.get("token_hash") ?? hashParams.get("invite_token");
+    const tokenHash =
+      hashParams.get("token_hash") ?? hashParams.get("invite_token");
     if (tokenHash) {
       setInviteTokenHash(tokenHash);
       window.history.replaceState(
@@ -53,6 +58,7 @@ function SignInContent() {
       if (!res.ok) {
         setError(data.message ?? "Unable to request a sign-in code.");
       } else {
+        setOtpStep("verify");
         setMessage(
           data.message ??
             "If an invited account exists for that email address, a one-time code has been sent."
@@ -60,6 +66,36 @@ function SignInContent() {
       }
     } catch {
       setError("Network error while requesting sign-in code.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleVerifyOtpSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    setMessage(null);
+    setSubmitting(true);
+
+    try {
+      const res = await fetch("/api/auth/verify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email,
+          code: otpCode.trim(),
+          ...(otpAdultConfirmed ? { adultConfirmed: true } : {}),
+        }),
+      });
+      const data = (await res.json()) as { message?: string };
+      if (!res.ok) {
+        setError(data.message ?? "Invalid or expired verification code.");
+      } else {
+        setMessage("Signed in! Redirecting...");
+        window.location.assign(returnTo);
+      }
+    } catch {
+      setError("Network error while verifying sign-in code.");
     } finally {
       setSubmitting(false);
     }
@@ -103,11 +139,16 @@ function SignInContent() {
     <div className="mx-auto max-w-md space-y-6 rounded-[12px] border border-slate-200 bg-white p-6 shadow-xs">
       <div className="space-y-1">
         <h1 className="text-xl font-bold text-[#0F172A]">
-          {inviteTokenHash ? "Accept Beta Invitation" : "Sign in to Tech Event Discover"}
+          {inviteTokenHash
+            ? "Accept Beta Invitation"
+            : "Sign in to Tech Event Discover"}
         </h1>
         <p className="text-xs text-[#475569]">
           R1 is an invited curated beta. Public browsing on{" "}
-          <Link href="/discover" className="font-semibold text-[#1D4ED8] hover:underline">
+          <Link
+            href="/discover"
+            className="font-semibold text-[#1D4ED8] hover:underline"
+          >
             Discover
           </Link>{" "}
           requires no account.
@@ -169,7 +210,7 @@ function SignInContent() {
             {submitting ? "Verifying invitation..." : "Accept invitation"}
           </button>
         </form>
-      ) : (
+      ) : otpStep === "request" ? (
         <form onSubmit={handleOtpSubmit} className="space-y-4">
           <div>
             <label
@@ -207,6 +248,67 @@ function SignInContent() {
           >
             {submitting ? "Sending code..." : "Send one-time code"}
           </button>
+        </form>
+      ) : (
+        <form onSubmit={handleVerifyOtpSubmit} className="space-y-4">
+          <div>
+            <label
+              htmlFor="signin-otp-code"
+              className="block text-xs font-semibold text-[#0F172A]"
+            >
+              6-digit one-time code sent to {email}
+            </label>
+            <input
+              id="signin-otp-code"
+              type="text"
+              inputMode="numeric"
+              pattern="\d{6}"
+              maxLength={6}
+              required
+              value={otpCode}
+              onChange={(e) => setOtpCode(e.target.value)}
+              placeholder="123456"
+              className="mt-1 w-full rounded-[12px] border border-slate-300 px-3 py-2 text-sm text-[#0F172A] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1D4ED8]"
+            />
+          </div>
+
+          <div className="flex items-start gap-2.5">
+            <input
+              id="otp-adult-confirm"
+              type="checkbox"
+              checked={otpAdultConfirmed}
+              onChange={(e) => setOtpAdultConfirmed(e.target.checked)}
+              className="mt-0.5 h-4 w-4 rounded border-slate-300 text-[#1D4ED8] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1D4ED8]"
+            />
+            <label
+              htmlFor="otp-adult-confirm"
+              className="text-xs leading-normal text-[#475569]"
+            >
+              I confirm I am at least 18 years old (required if completing an
+              interrupted invitation).
+            </label>
+          </div>
+
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="submit"
+              disabled={submitting}
+              className="flex-1 rounded-[12px] bg-[#1D4ED8] px-4 py-2 text-sm font-semibold text-white hover:bg-blue-800 disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1D4ED8]"
+            >
+              {submitting ? "Verifying..." : "Verify & sign in"}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setOtpStep("request");
+                setOtpCode("");
+                setError(null);
+              }}
+              className="rounded-[12px] border border-slate-300 bg-white px-4 py-2 text-xs font-semibold text-[#475569] hover:text-[#0F172A] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1D4ED8]"
+            >
+              Back
+            </button>
+          </div>
         </form>
       )}
     </div>
