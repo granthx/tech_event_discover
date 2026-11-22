@@ -22,10 +22,12 @@ BEGIN
   ELSE
     ALTER ROLE catalog_reader NOLOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOBYPASSRLS;
   END IF;
+  EXECUTE format('GRANT catalog_reader TO %I', current_user);
 END
 $$;
 
 GRANT USAGE ON SCHEMA public, extensions TO anon, authenticated, catalog_reader, service_role;
+GRANT CREATE ON SCHEMA public TO catalog_reader;
 
 -- 3. R1-MUST Enums
 CREATE TYPE public.event_status AS ENUM ('draft', 'published', 'canceled', 'archived');
@@ -397,10 +399,19 @@ DECLARE
   v_event_id uuid;
   v_status public.event_status;
 BEGIN
-  v_event_id := CASE
-    WHEN TG_TABLE_NAME = 'events' THEN COALESCE(NEW.id, OLD.id)
-    ELSE COALESCE(NEW.event_id, OLD.event_id)
-  END;
+  IF TG_TABLE_NAME = 'events' THEN
+    IF TG_OP = 'DELETE' THEN
+      v_event_id := OLD.id;
+    ELSE
+      v_event_id := NEW.id;
+    END IF;
+  ELSE
+    IF TG_OP = 'DELETE' THEN
+      v_event_id := OLD.event_id;
+    ELSE
+      v_event_id := NEW.event_id;
+    END IF;
+  END IF;
 
   SELECT e.status INTO v_status
     FROM public.events e
@@ -1003,6 +1014,17 @@ ALTER FUNCTION public.search_catalog_discover(
   timestamptz, text, public.event_type, public.event_mode, public.price_status,
   text, text, text, text, integer, timestamptz, boolean, timestamptz, uuid, integer
 ) OWNER TO catalog_reader;
+
+REVOKE CREATE ON SCHEMA public FROM catalog_reader;
+
+GRANT EXECUTE ON FUNCTION public.event_effective_start_at(boolean, timestamptz, date, text)
+  TO anon, authenticated, catalog_reader, service_role;
+
+GRANT EXECUTE ON FUNCTION public.event_effective_end_at(boolean, timestamptz, timestamptz, date, date, text)
+  TO anon, authenticated, catalog_reader, service_role;
+
+GRANT EXECUTE ON FUNCTION public.build_catalog_tsquery(text)
+  TO anon, authenticated, catalog_reader, service_role;
 
 -- Server-only EXECUTE per ARCHITECTURE.md (with catalog_reader allowed for pgTAP verification)
 REVOKE ALL ON FUNCTION public.search_catalog_discover(

@@ -29,7 +29,7 @@ DECLARE
   v_new_count integer;
   v_retry integer;
 BEGIN
-  v_epoch := pg_catalog.floor(pg_catalog.extract(epoch FROM p_now))::bigint;
+  v_epoch := pg_catalog.floor(EXTRACT(epoch FROM p_now))::bigint;
   v_window_start_epoch := (v_epoch / p_window_seconds) * p_window_seconds;
   v_window_start := pg_catalog.to_timestamp(v_window_start_epoch);
 
@@ -390,7 +390,7 @@ BEGIN
     actor_id, target_id, action, prior_version, new_version, recorded_at, reason_code, archived_url_keys
   )
   VALUES (
-    v_actor, v_event_id::text, 'create', NULL, 1, p_now, COALESCE(pg_catalog.nullif(pg_catalog.btrim(p_reason_code), ''), 'draft_created'), '{}'::text[]
+    v_actor, v_event_id::text, 'create', NULL, 1, p_now, COALESCE(NULLIF(pg_catalog.btrim(p_reason_code), ''), 'draft_created'), '{}'::text[]
   );
 
   RETURN v_event_id;
@@ -498,7 +498,7 @@ BEGIN
   )
   VALUES (
     v_actor, p_event_id::text, 'edit', v_current_version, v_new_version, p_now,
-    COALESCE(pg_catalog.nullif(pg_catalog.btrim(p_reason_code), ''), 'metadata_edited'),
+    COALESCE(NULLIF(pg_catalog.btrim(p_reason_code), ''), 'metadata_edited'),
     '{}'::text[]
   );
 
@@ -613,7 +613,7 @@ BEGIN
   )
   VALUES (
     v_actor, p_event_id::text, 'source', v_current_version, v_new_version, p_now,
-    COALESCE(pg_catalog.nullif(pg_catalog.btrim(p_reason_code), ''), 'source_updated'),
+    COALESCE(NULLIF(pg_catalog.btrim(p_reason_code), ''), 'source_updated'),
     '{}'::text[]
   );
 
@@ -774,7 +774,7 @@ BEGIN
     v_event.version,
     v_new_version,
     p_now,
-    COALESCE(pg_catalog.nullif(pg_catalog.btrim(p_reason_code), ''), p_action),
+    COALESCE(NULLIF(pg_catalog.btrim(p_reason_code), ''), p_action),
     v_archived_keys
   );
 
@@ -828,7 +828,7 @@ BEGIN
     AND (p_exclude_event_id IS NULL OR e.id <> p_exclude_event_id)
     AND extensions.similarity(public.normalize_event_title(e.title), v_norm_candidate) >= 0.65
     AND pg_catalog.abs(
-      pg_catalog.extract(
+      EXTRACT(
         epoch FROM (
           public.event_effective_start_at(e.is_all_day, e.starts_at, e.start_on, e.event_timezone)
           - p_effective_start_at
