@@ -1,0 +1,20 @@
+BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//Tech Event Discover//Curated Beta//EN
+CALSCALE:GREGORIAN
+METHOD:PUBLISH
+BEGIN:VEVENT
+UID:event-22222222-2222-4222-8222-222222222202@techeventdiscover.in
+DTSTAMP:20261201T100000Z
+SUMMARY:Async Rust Workshop for Early-Career Engineers
+LOCATION:Online (India access confirmed)
+URL:http://127.0.0.1:3000/events/22222222-2222-4222-8222-222222222202
+DESCRIPTION:Organizer: Rust India Community\n\nHands-on online workshop cov
+ ering Tokio\, async traits\, and structured concurrency accessible across 
+ India.\n\nOfficial registration: https://rustindia.org/workshops/async-rus
+ t-2026\n\nEvent details: http://127.0.0.1:3000/events/22222222-2222-4222-8
+ 222-222222222202\nNote: This calendar file is a one-time static copy and d
+ oes not sync future schedule changes automatically.
+DTSTART:20261208T100000Z
+END:VEVENT
+END:VCALENDAR

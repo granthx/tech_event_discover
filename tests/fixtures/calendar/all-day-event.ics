@@ -1,0 +1,21 @@
+BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//Tech Event Discover//Curated Beta//EN
+CALSCALE:GREGORIAN
+METHOD:PUBLISH
+BEGIN:VEVENT
+UID:event-22222222-2222-4222-8222-222222222299@techeventdiscover.in
+DTSTAMP:20261201T100000Z
+SUMMARY:All Day Open Source Summit 2026
+LOCATION:Indiranagar Community Hall\, Bengaluru\, Karnataka
+URL:http://127.0.0.1:3000/events/22222222-2222-4222-8222-222222222299
+DESCRIPTION:Organizer: FOSS United\n\nTwo-day all-day open source community
+  summit with exclusive end date.\n\nOfficial registration: https://fossuni
+ ted.org/events/open-source-summit-2026\n\nEvent details: http://127.0.0.1:
+ 3000/events/22222222-2222-4222-8222-222222222299\nNote: This calendar file
+  is a one-time static copy and does not sync future schedule changes autom
+ atically.
+DTSTART;VALUE=DATE:20261205
+DTEND;VALUE=DATE:20261207
+END:VEVENT
+END:VCALENDAR

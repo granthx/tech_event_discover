@@ -1,0 +1,21 @@
+BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//Tech Event Discover//Curated Beta//EN
+CALSCALE:GREGORIAN
+METHOD:PUBLISH
+BEGIN:VEVENT
+UID:event-22222222-2222-4222-8222-222222222201@techeventdiscover.in
+DTSTAMP:20261201T100000Z
+SUMMARY:India Systems Hackathon 2026
+LOCATION:Indiranagar Community Hall\, Bengaluru\, Karnataka
+URL:http://127.0.0.1:3000/events/22222222-2222-4222-8222-222222222201
+DESCRIPTION:Organizer: FOSS United\n\nA weekend systems programming hackath
+ on focused on distributed databases and open source developer tooling.\n\n
+ Official registration: https://fossunited.org/events/india-systems-hackath
+ on-2026\n\nEvent details: http://127.0.0.1:3000/events/22222222-2222-4222-
+ 8222-222222222201\nNote: This calendar file is a one-time static copy and 
+ does not sync future schedule changes automatically.
+DTSTART:20261206T100000Z
+DTEND:20261207T100000Z
+END:VEVENT
+END:VCALENDAR
