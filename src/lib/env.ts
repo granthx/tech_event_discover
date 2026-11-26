@@ -21,33 +21,43 @@ export type ServerEnv = z.infer<typeof serverEnvSchema>;
 export function getPublicEnv(): PublicEnv {
   return publicEnvSchema.parse({
     NEXT_PUBLIC_SUPABASE_URL:
-      process.env.NEXT_PUBLIC_SUPABASE_URL ?? "http://127.0.0.1:54321",
+      (process.env.NEXT_PUBLIC_SUPABASE_URL ?? "").trim() ||
+      "http://127.0.0.1:54321",
     NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY:
-      process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ?? "sb_publishable_placeholder_key",
+      (process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ?? "").trim() ||
+      "sb_publishable_placeholder_key",
     NEXT_PUBLIC_TURNSTILE_SITE_KEY:
-      process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ?? "1x00000000000000000000AA",
+      (process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ?? "").trim() ||
+      "1x00000000000000000000AA",
   });
 }
 
 export function getServerEnv(): ServerEnv {
   return serverEnvSchema.parse({
-    APP_ORIGIN: process.env.APP_ORIGIN ?? "http://127.0.0.1:3000",
+    APP_ORIGIN:
+      (process.env.APP_ORIGIN ?? "").trim() || "http://127.0.0.1:3000",
     NEXT_PUBLIC_SUPABASE_URL:
-      process.env.NEXT_PUBLIC_SUPABASE_URL ?? "http://127.0.0.1:54321",
+      (process.env.NEXT_PUBLIC_SUPABASE_URL ?? "").trim() ||
+      "http://127.0.0.1:54321",
     NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY:
-      process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ?? "sb_publishable_placeholder_key",
+      (process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ?? "").trim() ||
+      "sb_publishable_placeholder_key",
     SUPABASE_SERVICE_ROLE_KEY:
-      process.env.SUPABASE_SERVICE_ROLE_KEY ?? "sb_secret_service_role_placeholder_key",
+      (process.env.SUPABASE_SERVICE_ROLE_KEY ?? "").trim() ||
+      "sb_secret_service_role_placeholder_key",
     RATE_LIMIT_DIGEST_KEY:
-      process.env.RATE_LIMIT_DIGEST_KEY ??
+      (process.env.RATE_LIMIT_DIGEST_KEY ?? "").trim() ||
       "0000000000000000000000000000000000000000000000000000000000000000",
     PUBLIC_OWNER_NAME:
-      process.env.PUBLIC_OWNER_NAME ?? "Tech Event Discover (Curated Beta)",
+      (process.env.PUBLIC_OWNER_NAME ?? "").trim() ||
+      "Tech Event Discover (Curated Beta)",
     PUBLIC_CONTACT_EMAIL:
-      process.env.PUBLIC_CONTACT_EMAIL ?? "contact@example.org",
+      (process.env.PUBLIC_CONTACT_EMAIL ?? "").trim() || "contact@example.org",
     NEXT_PUBLIC_TURNSTILE_SITE_KEY:
-      process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ?? "1x00000000000000000000AA",
+      (process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ?? "").trim() ||
+      "1x00000000000000000000AA",
     TURNSTILE_SECRET_KEY:
-      process.env.TURNSTILE_SECRET_KEY ?? "1x0000000000000000000000000000000AA",
+      (process.env.TURNSTILE_SECRET_KEY ?? "").trim() ||
+      "1x0000000000000000000000000000000AA",
   });
 }
