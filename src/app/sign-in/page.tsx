@@ -64,6 +64,22 @@ function SignInContent() {
     }
   }, []);
 
+  // Detect if Turnstile script is already present on client-side navigation
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (window.turnstile) {
+      setScriptLoaded(true);
+      return;
+    }
+    const interval = window.setInterval(() => {
+      if (window.turnstile) {
+        setScriptLoaded(true);
+        window.clearInterval(interval);
+      }
+    }, 150);
+    return () => window.clearInterval(interval);
+  }, []);
+
   // Render Cloudflare Turnstile widget on the OTP request form
   useEffect(() => {
     if (
