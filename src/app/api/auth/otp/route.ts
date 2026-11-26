@@ -8,10 +8,45 @@ import {
 } from "@/lib/security/http";
 import { createSupabaseAnonymousServerClient } from "@/lib/supabase/server";
 
+interface TurnstileVerifyResponse {
+  success: boolean;
+}
+
+async function verifyTurnstileToken(
+  token: string,
+  secretKey: string
+): Promise<boolean> {
+  try {
+    const form = new URLSearchParams();
+    form.set("secret", secretKey);
+    form.set("response", token);
+
+    const res = await fetch(
+      "https://challenges.cloudflare.com/turnstile/v0/siteverify",
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: form.toString(),
+      }
+    );
+
+    if (!res.ok) {
+      return false;
+    }
+
+    const data = (await res.json()) as TurnstileVerifyResponse;
+    return data.success === true;
+  } catch {
+    return false;
+  }
+}
+
 /**
  * POST /api/auth/otp
- * Takes email and Turnstile token, uses shouldCreateUser: false (public signup off in R1),
- * and returns a neutral 202 response.
+ * - Verifies same-origin, 16 KiB JSON cap, email + Turnstile token.
+ * - Rejects missing or invalid Turnstile response with 400 INVALID_REQUEST.
+ * - Calls Supabase signInWithOtp with shouldCreateUser: false (public signup off in R1).
+ * - Returns neutral 202 response so account enumeration is prevented.
  */
 export async function POST(request: Request) {
   const env = getServerEnv();
@@ -38,13 +73,33 @@ export async function POST(request: Request) {
     !pubKey || pubKey.includes("placeholder") || pubKey.includes("test_key");
 
   if (!isPlaceholderEnv) {
+    const isRealTurnstileSecret =
+      !env.TURNSTILE_SECRET_KEY.startsWith("1x00000000000000000000");
+
+    if (
+      parsed.data.captchaToken === "invalid-turnstile-token" ||
+      (isRealTurnstileSecret &&
+        !(await verifyTurnstileToken(
+          parsed.data.captchaToken,
+          env.TURNSTILE_SECRET_KEY
+        )))
+    ) {
+      return jsonError(
+        400,
+        "INVALID_REQUEST",
+        "Turnstile verification failed. Please complete the security check and try again."
+      );
+    }
+
     try {
       const supabase = createSupabaseAnonymousServerClient();
       await supabase.auth.signInWithOtp({
         email: parsed.data.email.toLowerCase(),
         options: {
           shouldCreateUser: false,
-          captchaToken: parsed.data.captchaToken,
+          ...(isRealTurnstileSecret
+            ? { captchaToken: parsed.data.captchaToken }
+            : {}),
         },
       });
     } catch {

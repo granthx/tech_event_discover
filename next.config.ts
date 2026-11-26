@@ -1,5 +1,32 @@
 import type { NextConfig } from "next";
 
+const signInCsp = [
+  "default-src 'self'",
+  "script-src 'self' 'unsafe-inline' https://challenges.cloudflare.com",
+  "style-src 'self' 'unsafe-inline'",
+  "img-src 'self' data:",
+  "font-src 'self'",
+  "connect-src 'self' https://challenges.cloudflare.com https://*.supabase.co",
+  "frame-src https://challenges.cloudflare.com",
+  "object-src 'none'",
+  "base-uri 'self'",
+  "form-action 'self'",
+  "frame-ancestors 'none'",
+].join("; ");
+
+const privatePageCsp = [
+  "default-src 'self'",
+  "script-src 'self' 'unsafe-inline'",
+  "style-src 'self' 'unsafe-inline'",
+  "img-src 'self' data:",
+  "font-src 'self'",
+  "connect-src 'self' https://*.supabase.co",
+  "object-src 'none'",
+  "base-uri 'self'",
+  "form-action 'self'",
+  "frame-ancestors 'none'",
+].join("; ");
+
 const isHttpsOrigin = (process.env.APP_ORIGIN ?? "").startsWith("https://");
 
 const publicPageCsp = [
@@ -88,8 +115,29 @@ const nextConfig: NextConfig = {
         ],
       })),
       {
-        source: "/(sign-in|my-events|settings|admin/:path*)",
+        source: "/sign-in",
         headers: [
+          {
+            key: "Content-Security-Policy",
+            value: signInCsp,
+          },
+          {
+            key: "X-Robots-Tag",
+            value: "noindex, nofollow",
+          },
+          {
+            key: "Cache-Control",
+            value: "private, no-store",
+          },
+        ],
+      },
+      {
+        source: "/(my-events|settings|admin/:path*)",
+        headers: [
+          {
+            key: "Content-Security-Policy",
+            value: privatePageCsp,
+          },
           {
             key: "X-Robots-Tag",
             value: "noindex, nofollow",

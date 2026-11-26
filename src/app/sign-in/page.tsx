@@ -1,18 +1,43 @@
 "use client";
 
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import Script from "next/script";
 import { useSearchParams } from "next/navigation";
+import { getPublicEnv } from "@/lib/env";
 import { validateSameOriginReturnPath } from "@/lib/security/http";
+
+declare global {
+  interface Window {
+    turnstile?: {
+      render: (
+        container: HTMLElement,
+        options: {
+          sitekey: string;
+          callback: (token: string) => void;
+          "expired-callback"?: () => void;
+          "error-callback"?: () => void;
+        }
+      ) => string;
+      reset?: (widgetId?: string) => void;
+    };
+  }
+}
 
 function SignInContent() {
   const searchParams = useSearchParams();
   const returnTo = validateSameOriginReturnPath(searchParams.get("returnTo"));
+  const pubEnv = getPublicEnv();
 
   const [email, setEmail] = useState("");
   const [otpStep, setOtpStep] = useState<"request" | "verify">("request");
   const [otpCode, setOtpCode] = useState("");
   const [otpAdultConfirmed, setOtpAdultConfirmed] = useState(false);
+  const [captchaToken, setCaptchaToken] = useState<string>("");
+  const [scriptLoaded, setScriptLoaded] = useState(false);
+
+  const turnstileContainerRef = useRef<HTMLDivElement | null>(null);
+  const widgetIdRef = useRef<string | null>(null);
 
   const [inviteTokenHash, setInviteTokenHash] = useState<string | null>(null);
   const [adultConfirmed, setAdultConfirmed] = useState(false);
@@ -39,10 +64,45 @@ function SignInContent() {
     }
   }, []);
 
+  // Render Cloudflare Turnstile widget on the OTP request form
+  useEffect(() => {
+    if (
+      inviteTokenHash ||
+      otpStep !== "request" ||
+      !scriptLoaded ||
+      !turnstileContainerRef.current ||
+      !window.turnstile
+    ) {
+      return;
+    }
+
+    turnstileContainerRef.current.innerHTML = "";
+    widgetIdRef.current = window.turnstile.render(
+      turnstileContainerRef.current,
+      {
+        sitekey: pubEnv.NEXT_PUBLIC_TURNSTILE_SITE_KEY,
+        callback: (token: string) => setCaptchaToken(token),
+        "expired-callback": () => setCaptchaToken(""),
+        "error-callback": () => setCaptchaToken(""),
+      }
+    );
+  }, [
+    inviteTokenHash,
+    otpStep,
+    pubEnv.NEXT_PUBLIC_TURNSTILE_SITE_KEY,
+    scriptLoaded,
+  ]);
+
   const handleOtpSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
     setMessage(null);
+
+    if (!captchaToken) {
+      setError("Please complete the security check before requesting a code.");
+      return;
+    }
+
     setSubmitting(true);
 
     try {
@@ -51,12 +111,16 @@ function SignInContent() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           email,
-          captchaToken: "turnstile-client-token",
+          captchaToken,
         }),
       });
       const data = (await res.json()) as { message?: string };
       if (!res.ok) {
         setError(data.message ?? "Unable to request a sign-in code.");
+        if (window.turnstile?.reset && widgetIdRef.current) {
+          window.turnstile.reset(widgetIdRef.current);
+          setCaptchaToken("");
+        }
       } else {
         setOtpStep("verify");
         setMessage(
@@ -137,6 +201,12 @@ function SignInContent() {
 
   return (
     <div className="mx-auto max-w-md space-y-6 rounded-[12px] border border-slate-200 bg-white p-6 shadow-xs">
+      <Script
+        src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit"
+        strategy="afterInteractive"
+        onLoad={() => setScriptLoaded(true)}
+      />
+
       <div className="space-y-1">
         <h1 className="text-xl font-bold text-[#0F172A]">
           {inviteTokenHash
@@ -230,6 +300,12 @@ function SignInContent() {
             />
           </div>
 
+          <div
+            ref={turnstileContainerRef}
+            aria-label="Security verification widget"
+            className="min-h-[65px]"
+          />
+
           <p className="text-xs text-[#475569]">
             By signing in, you acknowledge our{" "}
             <Link
@@ -243,7 +319,7 @@ function SignInContent() {
 
           <button
             type="submit"
-            disabled={submitting}
+            disabled={submitting || !captchaToken}
             className="w-full rounded-[12px] bg-[#1D4ED8] px-4 py-2 text-sm font-semibold text-white hover:bg-blue-800 disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1D4ED8]"
           >
             {submitting ? "Sending code..." : "Send one-time code"}
