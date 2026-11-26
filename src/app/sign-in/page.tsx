@@ -96,12 +96,12 @@ function SignInContent() {
   // Detect Turnstile script availability
   useEffect(() => {
     if (typeof window === "undefined") return;
-    if (window.turnstile) {
+    if (typeof window.turnstile?.render === "function") {
       setScriptLoaded(true);
       return;
     }
     const interval = window.setInterval(() => {
-      if (window.turnstile) {
+      if (typeof window.turnstile?.render === "function") {
         setScriptLoaded(true);
         window.clearInterval(interval);
       }
@@ -109,7 +109,7 @@ function SignInContent() {
     return () => window.clearInterval(interval);
   }, []);
 
-  // Render Cloudflare Turnstile widget on the OTP request form
+  // Render Cloudflare Turnstile widget directly (do NOT call turnstile.ready() with async Next.js Script)
   useEffect(() => {
     if (
       alreadySignedIn ||
@@ -117,13 +117,12 @@ function SignInContent() {
       otpStep !== "request" ||
       !scriptLoaded ||
       !turnstileContainerRef.current ||
-      !window.turnstile
+      typeof window.turnstile?.render !== "function"
     ) {
       return;
     }
 
-    const mountWidget = () => {
-      if (!turnstileContainerRef.current || !window.turnstile) return;
+    try {
       turnstileContainerRef.current.innerHTML = "";
       widgetIdRef.current = window.turnstile.render(
         turnstileContainerRef.current,
@@ -142,12 +141,8 @@ function SignInContent() {
           },
         }
       );
-    };
-
-    if (typeof window.turnstile.ready === "function") {
-      window.turnstile.ready(mountWidget);
-    } else {
-      mountWidget();
+    } catch {
+      setError("Could not initialize security verification widget.");
     }
   }, [
     alreadySignedIn,
