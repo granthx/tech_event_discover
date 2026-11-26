@@ -90,6 +90,58 @@ export function evaluateTrackingTransition(
 export const otpRequestInputSchema = z.object({
   email: z.string().trim().email().max(254),
   captchaToken: z.string().trim().min(1).max(2048),
+  intent: z.enum(["signin", "signup"]).optional().default("signin"),
+  adultConfirmed: z.boolean().optional(),
+});
+
+export type EvaluateOtpSignupGateResult =
+  | { allowed: true; shouldCreateUser: boolean }
+  | {
+      allowed: false;
+      status: 400 | 403;
+      code: "SIGNUP_DISABLED" | "ADULT_ATTESTATION_REQUIRED";
+      message: string;
+    };
+
+/**
+ * Enforces the R2 open-signup gate (ARCHITECTURE.md line 128):
+ * - Returning sign-in (`intent === "signin"`) always keeps `shouldCreateUser: false`.
+ * - New signup (`intent === "signup"`) is rejected when `authSignupEnabled` is false (until Phase 4 Gate 5),
+ *   and requires explicit `adultConfirmed === true` before `shouldCreateUser: true` is permitted.
+ */
+export function evaluateOtpSignupGate(input: {
+  intent: "signin" | "signup";
+  adultConfirmed?: boolean;
+  authSignupEnabled: boolean;
+}): EvaluateOtpSignupGateResult {
+  if (input.intent === "signin") {
+    return { allowed: true, shouldCreateUser: false };
+  }
+
+  if (!input.authSignupEnabled) {
+    return {
+      allowed: false,
+      status: 403,
+      code: "SIGNUP_DISABLED",
+      message: "Independent account signup is not currently enabled.",
+    };
+  }
+
+  if (input.adultConfirmed !== true) {
+    return {
+      allowed: false,
+      status: 400,
+      code: "ADULT_ATTESTATION_REQUIRED",
+      message:
+        "You must confirm that you are at least 18 years old before creating an account.",
+    };
+  }
+
+  return { allowed: true, shouldCreateUser: true };
+}
+
+export const preferenceMutationInputSchema = z.object({
+  emailRemindersEnabled: z.boolean(),
 });
 
 export const inviteAcceptInputSchema = z.object({

@@ -21,6 +21,24 @@ export type CancellationReason =
   | "venue_unavailable"
   | "other_confirmed";
 export type TrackingState = "saved" | "registered";
+export type ReminderKind = "deadline" | "attendance";
+export type ReminderDeliveryStatus =
+  | "pending"
+  | "leased"
+  | "retry"
+  | "accepted"
+  | "expired"
+  | "suppressed"
+  | "failed"
+  | "unknown";
+export type JobName = "import" | "reminders";
+export type JobDispatchStatus = "queued" | "received" | "error" | "missing";
+export type JobExecutionStatus =
+  | "unclaimed"
+  | "running"
+  | "succeeded"
+  | "failed";
+export type SuppressionReason = "permanent_bounce" | "complaint";
 
 export type Database = {
   public: {
@@ -105,6 +123,7 @@ export type Database = {
           registration_deadline_at: string | null;
           registration_deadline_on: string | null;
           registration_closed: boolean;
+          reminder_hold?: boolean;
           canceled_at: string | null;
           cancellation_reason: CancellationReason | null;
           created_at: string;
@@ -132,6 +151,7 @@ export type Database = {
           registration_deadline_at?: string | null;
           registration_deadline_on?: string | null;
           registration_closed?: boolean;
+          reminder_hold?: boolean;
           canceled_at?: string | null;
           cancellation_reason?: CancellationReason | null;
           created_at?: string;
@@ -292,6 +312,145 @@ export type Database = {
         };
         Update: {
           count?: number;
+        };
+        Relationships: [];
+      };
+      user_preferences: {
+        Row: {
+          user_id: string;
+          email_reminders_enabled: boolean;
+          consent_version: number;
+          consent_recorded_at: string | null;
+          consent_notice_version: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          user_id: string;
+          email_reminders_enabled?: boolean;
+          consent_version?: number;
+          consent_recorded_at?: string | null;
+          consent_notice_version?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          email_reminders_enabled?: boolean;
+          consent_version?: number;
+          consent_recorded_at?: string | null;
+          consent_notice_version?: string | null;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      job_runs: {
+        Row: {
+          id: string;
+          job_name: JobName;
+          scheduled_at: string;
+          dispatch_token_digest: string | null;
+          dispatch_token_expires_at: string | null;
+          pg_net_request_id: number | null;
+          dispatch_status: JobDispatchStatus;
+          execution_status: JobExecutionStatus;
+          started_at: string | null;
+          finished_at: string | null;
+          error_code: string | null;
+          counts: Json;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          job_name: JobName;
+          scheduled_at: string;
+          dispatch_token_digest?: string | null;
+          dispatch_token_expires_at?: string | null;
+          pg_net_request_id?: number | null;
+          dispatch_status?: JobDispatchStatus;
+          execution_status?: JobExecutionStatus;
+          started_at?: string | null;
+          finished_at?: string | null;
+          error_code?: string | null;
+          counts?: Json;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["job_runs"]["Insert"]>;
+        Relationships: [];
+      };
+      reminder_deliveries: {
+        Row: {
+          id: string;
+          user_id: string;
+          event_id: string;
+          kind: ReminderKind;
+          target_at: string;
+          due_at: string;
+          expires_at: string;
+          status: ReminderDeliveryStatus;
+          lease_until: string | null;
+          attempt_count: number;
+          first_attempt_at: string | null;
+          next_attempt_at: string | null;
+          may_have_sent: boolean;
+          provider_message_id: string | null;
+          pending_payload: Json | null;
+          unsubscribe_token_digest: string | null;
+          unsubscribe_expires_at: string | null;
+          consent_version_at_send: number | null;
+          error_code: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          event_id: string;
+          kind: ReminderKind;
+          target_at: string;
+          due_at: string;
+          expires_at: string;
+          status?: ReminderDeliveryStatus;
+          lease_until?: string | null;
+          attempt_count?: number;
+          first_attempt_at?: string | null;
+          next_attempt_at?: string | null;
+          may_have_sent?: boolean;
+          provider_message_id?: string | null;
+          pending_payload?: Json | null;
+          unsubscribe_token_digest?: string | null;
+          unsubscribe_expires_at?: string | null;
+          consent_version_at_send?: number | null;
+          error_code?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<
+          Database["public"]["Tables"]["reminder_deliveries"]["Insert"]
+        >;
+        Relationships: [];
+      };
+      reminder_suppressions: {
+        Row: {
+          user_id: string;
+          recipient_digest: string;
+          reason: SuppressionReason;
+          expires_at: string;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          user_id: string;
+          recipient_digest: string;
+          reason: SuppressionReason;
+          expires_at: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          expires_at?: string;
+          updated_at?: string;
         };
         Relationships: [];
       };

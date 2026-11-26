@@ -1,17 +1,91 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
 export default function SettingsPage() {
-  const [deleteStep, setDeleteStep] = useState<"idle" | "awaiting_otp" | "deleted">(
-    "idle"
-  );
+  const [remindersEnabled, setRemindersEnabled] = useState(false);
+  const [prefsLoaded, setPrefsLoaded] = useState(false);
+  const [savingPrefs, setSavingPrefs] = useState(false);
+
+  const [deleteStep, setDeleteStep] = useState<
+    "idle" | "awaiting_otp" | "deleted"
+  >("idle");
   const [otpCode, setOtpCode] = useState("");
   const [statusMsg, setStatusMsg] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    let canceled = false;
+    fetch("/api/me/preferences", {
+      method: "GET",
+      cache: "no-store",
+      credentials: "same-origin",
+    })
+      .then(async (res) => {
+        if (!res.ok) return null;
+        return (await res.json()) as {
+          emailRemindersEnabled?: boolean;
+        };
+      })
+      .then((data) => {
+        if (canceled) return;
+        if (data && typeof data.emailRemindersEnabled === "boolean") {
+          setRemindersEnabled(data.emailRemindersEnabled);
+        }
+        setPrefsLoaded(true);
+      })
+      .catch(() => {
+        if (!canceled) setPrefsLoaded(true);
+      });
+
+    return () => {
+      canceled = true;
+    };
+  }, []);
+
+  const handleToggleReminders = async (nextChecked: boolean) => {
+    const previous = remindersEnabled;
+    setRemindersEnabled(nextChecked);
+    setSavingPrefs(true);
+    setErrorMsg(null);
+    setStatusMsg(null);
+
+    try {
+      const res = await fetch("/api/me/preferences", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
+        body: JSON.stringify({ emailRemindersEnabled: nextChecked }),
+      });
+
+      const data = (await res.json()) as {
+        emailRemindersEnabled?: boolean;
+        message?: string;
+      };
+
+      if (!res.ok) {
+        setRemindersEnabled(previous);
+        setErrorMsg(
+          data.message ?? "Sign in to update your email reminder setting."
+        );
+      } else {
+        setRemindersEnabled(Boolean(data.emailRemindersEnabled));
+        setStatusMsg(
+          data.emailRemindersEnabled
+            ? "Email reminders enabled for Saved deadlines and Registered start times."
+            : "Email reminders turned off."
+        );
+      }
+    } catch {
+      setRemindersEnabled(previous);
+      setErrorMsg("Network error while saving your reminder preference.");
+    } finally {
+      setSavingPrefs(false);
+    }
+  };
 
   const handleSignOut = async () => {
     setErrorMsg(null);
@@ -97,7 +171,7 @@ export default function SettingsPage() {
           Account Settings
         </h1>
         <p className="text-sm text-[#475569]">
-          Manage your invited beta session and account data. Review our{" "}
+          Manage your account preferences, session, and data. Review our{" "}
           <Link
             href="/privacy"
             className="font-semibold text-[#1D4ED8] hover:underline"
@@ -125,6 +199,40 @@ export default function SettingsPage() {
           {statusMsg}
         </div>
       )}
+
+      {/* Email Reminder Consent Section (R2-MUST · PROJECT_CONTEXT.md line 43) */}
+      <section
+        aria-label="Email reminder preferences"
+        className="space-y-3 rounded-[12px] border border-slate-200 bg-white p-6 shadow-xs"
+      >
+        <div className="space-y-1">
+          <h2 className="text-base font-semibold text-[#0F172A]">
+            Email Reminders
+          </h2>
+          <p className="text-xs leading-relaxed text-[#475569]">
+            Optional 24-hour reminders sent to your verified account email.
+            Defaults to off unless you opt in below.
+          </p>
+        </div>
+
+        <div className="flex items-start gap-3 pt-1">
+          <input
+            id="email-reminders-consent"
+            type="checkbox"
+            checked={remindersEnabled}
+            disabled={!prefsLoaded || savingPrefs || submitting}
+            onChange={(e) => handleToggleReminders(e.target.checked)}
+            className="mt-0.5 h-4 w-4 shrink-0 rounded border-slate-300 text-[#1D4ED8] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1D4ED8]"
+          />
+          <label
+            htmlFor="email-reminders-consent"
+            className="text-xs font-medium leading-relaxed text-[#0F172A]"
+          >
+            Email me before a saved event’s registration deadline and before
+            events I mark Registered. I can turn this off at any time.
+          </label>
+        </div>
+      </section>
 
       {/* Session Sign-Out Section */}
       <section
@@ -159,9 +267,10 @@ export default function SettingsPage() {
           <p className="text-xs leading-relaxed text-[#475569]">
             Deleting your account requires a fresh one-time passcode (OTP),
             immediately blocks ordinary writes, cascades all your Saved and
-            Registered tracking rows, and records only an opaque user UUID and
-            request timestamp in a separate 35-day tombstone so a 30-day backup
-            restore cannot silently reinstate your deleted account.
+            Registered tracking rows, preferences, and reminder records, and
+            records only an opaque user UUID and request timestamp in a separate
+            35-day tombstone so a 30-day backup restore cannot silently
+            reinstate your deleted account.
           </p>
         </div>
 

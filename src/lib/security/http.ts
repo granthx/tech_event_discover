@@ -7,6 +7,8 @@ export type SafeErrorCode =
   | "CURSOR_INVALID"
   | "UNAUTHENTICATED"
   | "FORBIDDEN"
+  | "SIGNUP_DISABLED"
+  | "ADULT_ATTESTATION_REQUIRED"
   | "NOT_FOUND"
   | "EVENT_INACTIVE"
   | "INVALID_TRANSITION"
@@ -14,10 +16,12 @@ export type SafeErrorCode =
   | "SOURCE_URL_CONFLICT"
   | "PAYLOAD_TOO_LARGE"
   | "RATE_LIMITED"
+  | "CORRELATION_PENDING"
+  | "WORKER_EXECUTION_FAILED"
   | "INTERNAL_ERROR";
 
 export function jsonError(
-  status: 400 | 401 | 403 | 404 | 409 | 413 | 429 | 500,
+  status: 400 | 401 | 403 | 404 | 409 | 413 | 429 | 500 | 503,
   code: SafeErrorCode,
   message: string,
   extraHeaders?: Record<string, string>

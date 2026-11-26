@@ -1,0 +1,666 @@
+{
+  "version": "1.0.0",
+  "description": "Ordered reminder eligibility truth-table fixtures shared by TypeScript (src/features/reminders/eligibility.ts) and PostgreSQL pgTAP (supabase/tests/r2_phase3a_reminders.sql).",
+  "cases": [
+    {
+      "id": "01_untracked_none",
+      "input": {
+        "trackingState": null,
+        "eventStatus": "published",
+        "optIn": true,
+        "reminderHold": false,
+        "deletionPending": false,
+        "hasVerifiedRecipient": true,
+        "hasActiveSuppression": false,
+        "isAllDay": false,
+        "startsAt": "2026-12-10T12:00:00.000Z",
+        "endsAt": "2026-12-10T15:00:00.000Z",
+        "startOn": null,
+        "endOn": null,
+        "eventTimezone": "Asia/Kolkata",
+        "registrationDeadlineAt": "2026-12-09T12:00:00.000Z",
+        "registrationDeadlineOn": null,
+        "registrationClosed": false,
+        "now": "2026-12-09T00:00:00.000Z"
+      },
+      "expected": {
+        "eligible": false,
+        "kind": null,
+        "anchorAt": null,
+        "dueAt": null,
+        "expiresAt": null,
+        "reason": "untracked"
+      }
+    },
+    {
+      "id": "02_inactive_status_draft",
+      "input": {
+        "trackingState": "saved",
+        "eventStatus": "draft",
+        "optIn": true,
+        "reminderHold": false,
+        "deletionPending": false,
+        "hasVerifiedRecipient": true,
+        "hasActiveSuppression": false,
+        "isAllDay": false,
+        "startsAt": "2026-12-10T12:00:00.000Z",
+        "endsAt": "2026-12-10T15:00:00.000Z",
+        "startOn": null,
+        "endOn": null,
+        "eventTimezone": "Asia/Kolkata",
+        "registrationDeadlineAt": "2026-12-09T12:00:00.000Z",
+        "registrationDeadlineOn": null,
+        "registrationClosed": false,
+        "now": "2026-12-09T00:00:00.000Z"
+      },
+      "expected": {
+        "eligible": false,
+        "kind": null,
+        "anchorAt": null,
+        "dueAt": null,
+        "expiresAt": null,
+        "reason": "inactive_status"
+      }
+    },
+    {
+      "id": "03_inactive_status_canceled",
+      "input": {
+        "trackingState": "registered",
+        "eventStatus": "canceled",
+        "optIn": true,
+        "reminderHold": false,
+        "deletionPending": false,
+        "hasVerifiedRecipient": true,
+        "hasActiveSuppression": false,
+        "isAllDay": false,
+        "startsAt": "2026-12-10T12:00:00.000Z",
+        "endsAt": "2026-12-10T15:00:00.000Z",
+        "startOn": null,
+        "endOn": null,
+        "eventTimezone": "Asia/Kolkata",
+        "registrationDeadlineAt": null,
+        "registrationDeadlineOn": null,
+        "registrationClosed": false,
+        "now": "2026-12-10T00:00:00.000Z"
+      },
+      "expected": {
+        "eligible": false,
+        "kind": null,
+        "anchorAt": null,
+        "dueAt": null,
+        "expiresAt": null,
+        "reason": "inactive_status"
+      }
+    },
+    {
+      "id": "04_inactive_status_archived",
+      "input": {
+        "trackingState": "registered",
+        "eventStatus": "archived",
+        "optIn": true,
+        "reminderHold": false,
+        "deletionPending": false,
+        "hasVerifiedRecipient": true,
+        "hasActiveSuppression": false,
+        "isAllDay": false,
+        "startsAt": "2026-12-10T12:00:00.000Z",
+        "endsAt": "2026-12-10T15:00:00.000Z",
+        "startOn": null,
+        "endOn": null,
+        "eventTimezone": "Asia/Kolkata",
+        "registrationDeadlineAt": null,
+        "registrationDeadlineOn": null,
+        "registrationClosed": false,
+        "now": "2026-12-10T00:00:00.000Z"
+      },
+      "expected": {
+        "eligible": false,
+        "kind": null,
+        "anchorAt": null,
+        "dueAt": null,
+        "expiresAt": null,
+        "reason": "inactive_status"
+      }
+    },
+    {
+      "id": "05_opted_out",
+      "input": {
+        "trackingState": "saved",
+        "eventStatus": "published",
+        "optIn": false,
+        "reminderHold": false,
+        "deletionPending": false,
+        "hasVerifiedRecipient": true,
+        "hasActiveSuppression": false,
+        "isAllDay": false,
+        "startsAt": "2026-12-10T12:00:00.000Z",
+        "endsAt": "2026-12-10T15:00:00.000Z",
+        "startOn": null,
+        "endOn": null,
+        "eventTimezone": "Asia/Kolkata",
+        "registrationDeadlineAt": "2026-12-09T12:00:00.000Z",
+        "registrationDeadlineOn": null,
+        "registrationClosed": false,
+        "now": "2026-12-09T00:00:00.000Z"
+      },
+      "expected": {
+        "eligible": false,
+        "kind": null,
+        "anchorAt": null,
+        "dueAt": null,
+        "expiresAt": null,
+        "reason": "opted_out"
+      }
+    },
+    {
+      "id": "06_hold_reminder_hold_true",
+      "input": {
+        "trackingState": "saved",
+        "eventStatus": "published",
+        "optIn": true,
+        "reminderHold": true,
+        "deletionPending": false,
+        "hasVerifiedRecipient": true,
+        "hasActiveSuppression": false,
+        "isAllDay": false,
+        "startsAt": "2026-12-10T12:00:00.000Z",
+        "endsAt": "2026-12-10T15:00:00.000Z",
+        "startOn": null,
+        "endOn": null,
+        "eventTimezone": "Asia/Kolkata",
+        "registrationDeadlineAt": "2026-12-09T12:00:00.000Z",
+        "registrationDeadlineOn": null,
+        "registrationClosed": false,
+        "now": "2026-12-09T00:00:00.000Z"
+      },
+      "expected": {
+        "eligible": false,
+        "kind": null,
+        "anchorAt": null,
+        "dueAt": null,
+        "expiresAt": null,
+        "reason": "applicable_hold"
+      }
+    },
+    {
+      "id": "07_hold_deletion_pending",
+      "input": {
+        "trackingState": "registered",
+        "eventStatus": "published",
+        "optIn": true,
+        "reminderHold": false,
+        "deletionPending": true,
+        "hasVerifiedRecipient": true,
+        "hasActiveSuppression": false,
+        "isAllDay": false,
+        "startsAt": "2026-12-10T12:00:00.000Z",
+        "endsAt": "2026-12-10T15:00:00.000Z",
+        "startOn": null,
+        "endOn": null,
+        "eventTimezone": "Asia/Kolkata",
+        "registrationDeadlineAt": null,
+        "registrationDeadlineOn": null,
+        "registrationClosed": false,
+        "now": "2026-12-10T00:00:00.000Z"
+      },
+      "expected": {
+        "eligible": false,
+        "kind": null,
+        "anchorAt": null,
+        "dueAt": null,
+        "expiresAt": null,
+        "reason": "applicable_hold"
+      }
+    },
+    {
+      "id": "08_hold_unverified_recipient",
+      "input": {
+        "trackingState": "registered",
+        "eventStatus": "published",
+        "optIn": true,
+        "reminderHold": false,
+        "deletionPending": false,
+        "hasVerifiedRecipient": false,
+        "hasActiveSuppression": false,
+        "isAllDay": false,
+        "startsAt": "2026-12-10T12:00:00.000Z",
+        "endsAt": "2026-12-10T15:00:00.000Z",
+        "startOn": null,
+        "endOn": null,
+        "eventTimezone": "Asia/Kolkata",
+        "registrationDeadlineAt": null,
+        "registrationDeadlineOn": null,
+        "registrationClosed": false,
+        "now": "2026-12-10T00:00:00.000Z"
+      },
+      "expected": {
+        "eligible": false,
+        "kind": null,
+        "anchorAt": null,
+        "dueAt": null,
+        "expiresAt": null,
+        "reason": "applicable_hold"
+      }
+    },
+    {
+      "id": "09_hold_active_suppression",
+      "input": {
+        "trackingState": "saved",
+        "eventStatus": "published",
+        "optIn": true,
+        "reminderHold": false,
+        "deletionPending": false,
+        "hasVerifiedRecipient": true,
+        "hasActiveSuppression": true,
+        "isAllDay": false,
+        "startsAt": "2026-12-10T12:00:00.000Z",
+        "endsAt": "2026-12-10T15:00:00.000Z",
+        "startOn": null,
+        "endOn": null,
+        "eventTimezone": "Asia/Kolkata",
+        "registrationDeadlineAt": "2026-12-09T12:00:00.000Z",
+        "registrationDeadlineOn": null,
+        "registrationClosed": false,
+        "now": "2026-12-09T00:00:00.000Z"
+      },
+      "expected": {
+        "eligible": false,
+        "kind": null,
+        "anchorAt": null,
+        "dueAt": null,
+        "expiresAt": null,
+        "reason": "applicable_hold"
+      }
+    },
+    {
+      "id": "10_saved_missing_deadline",
+      "input": {
+        "trackingState": "saved",
+        "eventStatus": "published",
+        "optIn": true,
+        "reminderHold": false,
+        "deletionPending": false,
+        "hasVerifiedRecipient": true,
+        "hasActiveSuppression": false,
+        "isAllDay": false,
+        "startsAt": "2026-12-10T12:00:00.000Z",
+        "endsAt": "2026-12-10T15:00:00.000Z",
+        "startOn": null,
+        "endOn": null,
+        "eventTimezone": "Asia/Kolkata",
+        "registrationDeadlineAt": null,
+        "registrationDeadlineOn": null,
+        "registrationClosed": false,
+        "now": "2026-12-09T12:00:00.000Z"
+      },
+      "expected": {
+        "eligible": false,
+        "kind": null,
+        "anchorAt": null,
+        "dueAt": null,
+        "expiresAt": null,
+        "reason": "no_exact_deadline"
+      }
+    },
+    {
+      "id": "11_saved_date_only_deadline_is_non_exact",
+      "input": {
+        "trackingState": "saved",
+        "eventStatus": "published",
+        "optIn": true,
+        "reminderHold": false,
+        "deletionPending": false,
+        "hasVerifiedRecipient": true,
+        "hasActiveSuppression": false,
+        "isAllDay": true,
+        "startsAt": null,
+        "endsAt": null,
+        "startOn": "2026-12-10",
+        "endOn": "2026-12-12",
+        "eventTimezone": "Asia/Kolkata",
+        "registrationDeadlineAt": null,
+        "registrationDeadlineOn": "2026-12-09",
+        "registrationClosed": false,
+        "now": "2026-12-08T12:00:00.000Z"
+      },
+      "expected": {
+        "eligible": false,
+        "kind": null,
+        "anchorAt": null,
+        "dueAt": null,
+        "expiresAt": null,
+        "reason": "no_exact_deadline"
+      }
+    },
+    {
+      "id": "12_saved_registration_closed",
+      "input": {
+        "trackingState": "saved",
+        "eventStatus": "published",
+        "optIn": true,
+        "reminderHold": false,
+        "deletionPending": false,
+        "hasVerifiedRecipient": true,
+        "hasActiveSuppression": false,
+        "isAllDay": false,
+        "startsAt": "2026-12-10T12:00:00.000Z",
+        "endsAt": "2026-12-10T15:00:00.000Z",
+        "startOn": null,
+        "endOn": null,
+        "eventTimezone": "Asia/Kolkata",
+        "registrationDeadlineAt": "2026-12-09T12:00:00.000Z",
+        "registrationDeadlineOn": null,
+        "registrationClosed": true,
+        "now": "2026-12-09T00:00:00.000Z"
+      },
+      "expected": {
+        "eligible": false,
+        "kind": null,
+        "anchorAt": null,
+        "dueAt": null,
+        "expiresAt": null,
+        "reason": "registration_closed"
+      }
+    },
+    {
+      "id": "13_saved_exact_before_due_boundary",
+      "input": {
+        "trackingState": "saved",
+        "eventStatus": "published",
+        "optIn": true,
+        "reminderHold": false,
+        "deletionPending": false,
+        "hasVerifiedRecipient": true,
+        "hasActiveSuppression": false,
+        "isAllDay": false,
+        "startsAt": "2026-12-10T12:00:00.000Z",
+        "endsAt": "2026-12-10T15:00:00.000Z",
+        "startOn": null,
+        "endOn": null,
+        "eventTimezone": "Asia/Kolkata",
+        "registrationDeadlineAt": "2026-12-09T12:00:00.000Z",
+        "registrationDeadlineOn": null,
+        "registrationClosed": false,
+        "now": "2026-12-08T11:59:59.000Z"
+      },
+      "expected": {
+        "eligible": false,
+        "kind": "deadline",
+        "anchorAt": "2026-12-09T12:00:00.000Z",
+        "dueAt": "2026-12-08T12:00:00.000Z",
+        "expiresAt": "2026-12-09T11:45:00.000Z",
+        "reason": "too_early"
+      }
+    },
+    {
+      "id": "14_saved_exact_at_due_boundary_in_window",
+      "input": {
+        "trackingState": "saved",
+        "eventStatus": "published",
+        "optIn": true,
+        "reminderHold": false,
+        "deletionPending": false,
+        "hasVerifiedRecipient": true,
+        "hasActiveSuppression": false,
+        "isAllDay": false,
+        "startsAt": "2026-12-10T12:00:00.000Z",
+        "endsAt": "2026-12-10T15:00:00.000Z",
+        "startOn": null,
+        "endOn": null,
+        "eventTimezone": "Asia/Kolkata",
+        "registrationDeadlineAt": "2026-12-09T12:00:00.000Z",
+        "registrationDeadlineOn": null,
+        "registrationClosed": false,
+        "now": "2026-12-08T12:00:00.000Z"
+      },
+      "expected": {
+        "eligible": true,
+        "kind": "deadline",
+        "anchorAt": "2026-12-09T12:00:00.000Z",
+        "dueAt": "2026-12-08T12:00:00.000Z",
+        "expiresAt": "2026-12-09T11:45:00.000Z",
+        "reason": null
+      }
+    },
+    {
+      "id": "15_saved_exact_at_expiry_boundary_too_late",
+      "input": {
+        "trackingState": "saved",
+        "eventStatus": "published",
+        "optIn": true,
+        "reminderHold": false,
+        "deletionPending": false,
+        "hasVerifiedRecipient": true,
+        "hasActiveSuppression": false,
+        "isAllDay": false,
+        "startsAt": "2026-12-10T12:00:00.000Z",
+        "endsAt": "2026-12-10T15:00:00.000Z",
+        "startOn": null,
+        "endOn": null,
+        "eventTimezone": "Asia/Kolkata",
+        "registrationDeadlineAt": "2026-12-09T12:00:00.000Z",
+        "registrationDeadlineOn": null,
+        "registrationClosed": false,
+        "now": "2026-12-09T11:45:00.000Z"
+      },
+      "expected": {
+        "eligible": false,
+        "kind": "deadline",
+        "anchorAt": "2026-12-09T12:00:00.000Z",
+        "dueAt": "2026-12-08T12:00:00.000Z",
+        "expiresAt": "2026-12-09T11:45:00.000Z",
+        "reason": "too_late"
+      }
+    },
+    {
+      "id": "16_saved_timed_unknown_end_in_window",
+      "input": {
+        "trackingState": "saved",
+        "eventStatus": "published",
+        "optIn": true,
+        "reminderHold": false,
+        "deletionPending": false,
+        "hasVerifiedRecipient": true,
+        "hasActiveSuppression": false,
+        "isAllDay": false,
+        "startsAt": "2026-12-10T12:00:00.000Z",
+        "endsAt": null,
+        "startOn": null,
+        "endOn": null,
+        "eventTimezone": "UTC",
+        "registrationDeadlineAt": "2026-12-10T10:00:00.000Z",
+        "registrationDeadlineOn": null,
+        "registrationClosed": false,
+        "now": "2026-12-10T09:44:59.000Z"
+      },
+      "expected": {
+        "eligible": true,
+        "kind": "deadline",
+        "anchorAt": "2026-12-10T10:00:00.000Z",
+        "dueAt": "2026-12-09T10:00:00.000Z",
+        "expiresAt": "2026-12-10T09:45:00.000Z",
+        "reason": null
+      }
+    },
+    {
+      "id": "17_registered_timed_before_due",
+      "input": {
+        "trackingState": "registered",
+        "eventStatus": "published",
+        "optIn": true,
+        "reminderHold": false,
+        "deletionPending": false,
+        "hasVerifiedRecipient": true,
+        "hasActiveSuppression": false,
+        "isAllDay": false,
+        "startsAt": "2026-12-10T12:00:00.000Z",
+        "endsAt": "2026-12-10T15:00:00.000Z",
+        "startOn": null,
+        "endOn": null,
+        "eventTimezone": "Asia/Kolkata",
+        "registrationDeadlineAt": "2026-12-09T12:00:00.000Z",
+        "registrationDeadlineOn": null,
+        "registrationClosed": false,
+        "now": "2026-12-09T11:59:59.000Z"
+      },
+      "expected": {
+        "eligible": false,
+        "kind": "attendance",
+        "anchorAt": "2026-12-10T12:00:00.000Z",
+        "dueAt": "2026-12-09T12:00:00.000Z",
+        "expiresAt": "2026-12-10T11:45:00.000Z",
+        "reason": "too_early"
+      }
+    },
+    {
+      "id": "18_registered_timed_in_window_at_exact_due_transition_from_saved",
+      "input": {
+        "trackingState": "registered",
+        "eventStatus": "published",
+        "optIn": true,
+        "reminderHold": false,
+        "deletionPending": false,
+        "hasVerifiedRecipient": true,
+        "hasActiveSuppression": false,
+        "isAllDay": false,
+        "startsAt": "2026-12-10T12:00:00.000Z",
+        "endsAt": "2026-12-10T15:00:00.000Z",
+        "startOn": null,
+        "endOn": null,
+        "eventTimezone": "Asia/Kolkata",
+        "registrationDeadlineAt": "2026-12-09T12:00:00.000Z",
+        "registrationDeadlineOn": null,
+        "registrationClosed": true,
+        "now": "2026-12-09T12:00:00.000Z"
+      },
+      "expected": {
+        "eligible": true,
+        "kind": "attendance",
+        "anchorAt": "2026-12-10T12:00:00.000Z",
+        "dueAt": "2026-12-09T12:00:00.000Z",
+        "expiresAt": "2026-12-10T11:45:00.000Z",
+        "reason": null
+      }
+    },
+    {
+      "id": "19_ongoing_event_does_not_receive_attendance_reminder",
+      "input": {
+        "trackingState": "registered",
+        "eventStatus": "published",
+        "optIn": true,
+        "reminderHold": false,
+        "deletionPending": false,
+        "hasVerifiedRecipient": true,
+        "hasActiveSuppression": false,
+        "isAllDay": false,
+        "startsAt": "2026-12-10T12:00:00.000Z",
+        "endsAt": null,
+        "startOn": null,
+        "endOn": null,
+        "eventTimezone": "Asia/Kolkata",
+        "registrationDeadlineAt": null,
+        "registrationDeadlineOn": null,
+        "registrationClosed": false,
+        "now": "2026-12-10T12:30:00.000Z"
+      },
+      "expected": {
+        "eligible": false,
+        "kind": "attendance",
+        "anchorAt": "2026-12-10T12:00:00.000Z",
+        "dueAt": "2026-12-09T12:00:00.000Z",
+        "expiresAt": "2026-12-10T11:45:00.000Z",
+        "reason": "too_late"
+      }
+    },
+    {
+      "id": "20_registered_all_day_in_window_0900_anchor",
+      "input": {
+        "trackingState": "registered",
+        "eventStatus": "published",
+        "optIn": true,
+        "reminderHold": false,
+        "deletionPending": false,
+        "hasVerifiedRecipient": true,
+        "hasActiveSuppression": false,
+        "isAllDay": true,
+        "startsAt": null,
+        "endsAt": null,
+        "startOn": "2026-12-10",
+        "endOn": "2026-12-11",
+        "eventTimezone": "Asia/Kolkata",
+        "registrationDeadlineAt": null,
+        "registrationDeadlineOn": null,
+        "registrationClosed": false,
+        "now": "2026-12-09T10:00:00.000Z"
+      },
+      "expected": {
+        "eligible": true,
+        "kind": "attendance",
+        "anchorAt": "2026-12-10T03:30:00.000Z",
+        "dueAt": "2026-12-09T03:30:00.000Z",
+        "expiresAt": "2026-12-09T18:15:00.000Z",
+        "reason": null
+      }
+    },
+    {
+      "id": "21_registered_all_day_midnight_cutoff_too_late",
+      "input": {
+        "trackingState": "registered",
+        "eventStatus": "published",
+        "optIn": true,
+        "reminderHold": false,
+        "deletionPending": false,
+        "hasVerifiedRecipient": true,
+        "hasActiveSuppression": false,
+        "isAllDay": true,
+        "startsAt": null,
+        "endsAt": null,
+        "startOn": "2026-12-10",
+        "endOn": "2026-12-11",
+        "eventTimezone": "Asia/Kolkata",
+        "registrationDeadlineAt": null,
+        "registrationDeadlineOn": null,
+        "registrationClosed": false,
+        "now": "2026-12-09T18:15:00.000Z"
+      },
+      "expected": {
+        "eligible": false,
+        "kind": "attendance",
+        "anchorAt": "2026-12-10T03:30:00.000Z",
+        "dueAt": "2026-12-09T03:30:00.000Z",
+        "expiresAt": "2026-12-09T18:15:00.000Z",
+        "reason": "too_late"
+      }
+    },
+    {
+      "id": "22_registered_to_saved_transition_restores_deadline_evaluation",
+      "input": {
+        "trackingState": "saved",
+        "eventStatus": "published",
+        "optIn": true,
+        "reminderHold": false,
+        "deletionPending": false,
+        "hasVerifiedRecipient": true,
+        "hasActiveSuppression": false,
+        "isAllDay": false,
+        "startsAt": "2026-12-10T12:00:00.000Z",
+        "endsAt": "2026-12-10T15:00:00.000Z",
+        "startOn": null,
+        "endOn": null,
+        "eventTimezone": "Asia/Kolkata",
+        "registrationDeadlineAt": "2026-12-09T18:00:00.000Z",
+        "registrationDeadlineOn": null,
+        "registrationClosed": false,
+        "now": "2026-12-09T12:00:00.000Z"
+      },
+      "expected": {
+        "eligible": true,
+        "kind": "deadline",
+        "anchorAt": "2026-12-09T18:00:00.000Z",
+        "dueAt": "2026-12-08T18:00:00.000Z",
+        "expiresAt": "2026-12-09T17:45:00.000Z",
+        "reason": null
+      }
+    }
+  ]
+}

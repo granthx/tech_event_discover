@@ -33,7 +33,7 @@ export function EventDetailActions({
         if (canceled) return;
         setTrackingState(data.items?.[eventId] ?? null);
       })
-      .catch(() => {});
+      .catch(() => { });
 
     return () => {
       canceled = true;
@@ -67,8 +67,8 @@ export function EventDetailActions({
           nextState === "none"
             ? "Removed from My Events."
             : nextState === "registered"
-            ? "Marked as Registered in My Events."
-            : "Saved to My Events."
+              ? "Marked as Registered in My Events."
+              : "Saved to My Events."
         );
       } else {
         setTrackingState(previousState);
@@ -106,11 +106,10 @@ export function EventDetailActions({
               handleSetTracking(trackingState === "saved" ? "none" : "saved")
             }
             aria-pressed={trackingState === "saved"}
-            className={`rounded-[12px] border px-3.5 py-2 text-xs font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1D4ED8] ${
-              trackingState === "saved"
-                ? "border-[#1D4ED8] bg-[#1D4ED8] text-white"
-                : "border-slate-300 bg-white text-[#0F172A] hover:border-[#1D4ED8] hover:text-[#1D4ED8] disabled:opacity-50"
-            }`}
+            className={`rounded-[12px] border px-3.5 py-2 text-xs font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1D4ED8] ${trackingState === "saved"
+              ? "border-[#1D4ED8] bg-[#1D4ED8] text-white"
+              : "border-slate-300 bg-white text-[#0F172A] hover:border-[#1D4ED8] hover:text-[#1D4ED8] disabled:opacity-50"
+              }`}
           >
             {trackingState === "saved" ? "Saved" : "Save event"}
           </button>
@@ -126,11 +125,10 @@ export function EventDetailActions({
               )
             }
             aria-pressed={trackingState === "registered"}
-            className={`rounded-[12px] border px-3.5 py-2 text-xs font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1D4ED8] ${
-              trackingState === "registered"
-                ? "border-emerald-700 bg-emerald-700 text-white"
-                : "border-slate-300 bg-white text-[#0F172A] hover:border-[#1D4ED8] hover:text-[#1D4ED8] disabled:opacity-50"
-            }`}
+            className={`rounded-[12px] border px-3.5 py-2 text-xs font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1D4ED8] ${trackingState === "registered"
+              ? "border-emerald-700 bg-emerald-700 text-white"
+              : "border-slate-300 bg-white text-[#0F172A] hover:border-[#1D4ED8] hover:text-[#1D4ED8] disabled:opacity-50"
+              }`}
           >
             {trackingState === "registered"
               ? "Marked Registered"

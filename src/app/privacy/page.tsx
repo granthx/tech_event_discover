@@ -60,17 +60,27 @@ export default function PrivacyPage() {
         <ul className="list-disc space-y-1 pl-5">
           <li>
             <strong>Authentication & Member Tracking:</strong> Your verified email address
-            lives in Supabase Auth. Saved and Registered tracking rows belong to your account.
+            lives in Supabase Auth. Saved and Registered tracking rows and optional email
+            reminder preferences belong to your account.
+          </li>
+          <li>
+            <strong>Optional Email Reminders:</strong> Deadline and attendance reminders are
+            off by default and sent only if you explicitly opt in under Settings. Every reminder
+            includes one-click unsubscribe headers and a read-only confirmation link.
           </li>
           <li>
             <strong>Infrastructure Processors:</strong> Hosted on Vercel (web delivery) and
             Supabase (Postgres database & authentication), with Cloudflare Turnstile for
-            bot protection on authentication requests.
+            bot protection, Resend for opt-in reminder delivery, and Healthchecks.io for
+            safe job-health monitoring (status codes and check IDs only).
           </li>
           <li>
             <strong>Retention Schedule:</strong> Private curator audit records are retained
-            for 180 days; OTP and mutation rate-limit buckets are kept for 24 hours;
-            encrypted database backups are retained for 30 days.
+            for 180 days; OTP and mutation rate-limit buckets for 24 hours; encrypted database
+            backups for 30 days; job run logs for 30 days; reminder delivery keys and unsubscribe
+            digests for 90 days; permanent-bounce suppressions for 90 days; and complaint
+            suppressions for 180 days. Temporary reminder request payloads are cleared on
+            terminal completion or within 23 hours of first attempt.
           </li>
         </ul>
       </section>

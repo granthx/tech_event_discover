@@ -1,5 +1,8 @@
 import { NextResponse } from "next/server";
-import { otpRequestInputSchema } from "@/features/account/state";
+import {
+  evaluateOtpSignupGate,
+  otpRequestInputSchema,
+} from "@/features/account/state";
 import { getServerEnv } from "@/lib/env";
 import {
   jsonError,
@@ -46,6 +49,16 @@ export async function POST(request: Request) {
     );
   }
 
+  const signupGate = evaluateOtpSignupGate({
+    intent: parsed.data.intent,
+    adultConfirmed: parsed.data.adultConfirmed,
+    authSignupEnabled: env.AUTH_SIGNUP_ENABLED,
+  });
+
+  if (!signupGate.allowed) {
+    return jsonError(signupGate.status, signupGate.code, signupGate.message);
+  }
+
   const pubKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ?? "";
   const isPlaceholderEnv =
     !pubKey || pubKey.includes("placeholder") || pubKey.includes("test_key");
@@ -56,7 +69,7 @@ export async function POST(request: Request) {
       const { error } = await supabase.auth.signInWithOtp({
         email: parsed.data.email.toLowerCase(),
         options: {
-          shouldCreateUser: false,
+          shouldCreateUser: signupGate.shouldCreateUser,
           captchaToken: parsed.data.captchaToken,
         },
       });
