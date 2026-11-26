@@ -13,7 +13,7 @@ const verifyOtpSchema = z.object({
   code: z
     .string()
     .trim()
-    .regex(/^\d{6}$/, "A 6-digit verification code is required."),
+    .regex(/^\d{6,8}$/, "A 6 to 8 digit verification code is required."),
   adultConfirmed: z.boolean().optional(),
 });
 

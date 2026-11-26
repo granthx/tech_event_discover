@@ -348,18 +348,18 @@ function SignInContent() {
               htmlFor="signin-otp-code"
               className="block text-xs font-semibold text-[#0F172A]"
             >
-              6-digit one-time code sent to {email}
+              One-time verification code sent to {email}
             </label>
             <input
               id="signin-otp-code"
               type="text"
               inputMode="numeric"
-              pattern="\d{6}"
-              maxLength={6}
+              pattern="\d{6,8}"
+              maxLength={8}
               required
               value={otpCode}
               onChange={(e) => setOtpCode(e.target.value)}
-              placeholder="123456"
+              placeholder="Enter 6 or 8 digit code"
               className="mt-1 w-full rounded-[12px] border border-slate-300 px-3 py-2 text-sm text-[#0F172A] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1D4ED8]"
             />
           </div>

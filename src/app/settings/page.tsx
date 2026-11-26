@@ -181,18 +181,18 @@ export default function SettingsPage() {
                 htmlFor="deletion-otp-code"
                 className="block text-xs font-semibold text-[#0F172A]"
               >
-                6-digit deletion confirmation code
+                Deletion confirmation code
               </label>
               <input
                 id="deletion-otp-code"
                 type="text"
                 inputMode="numeric"
-                pattern="\d{6}"
-                maxLength={6}
+                pattern="\d{6,8}"
+                maxLength={8}
                 required
                 value={otpCode}
                 onChange={(e) => setOtpCode(e.target.value)}
-                placeholder="123456"
+                placeholder="Enter code"
                 className="mt-1 w-48 rounded-[12px] border border-slate-300 px-3 py-2 text-sm text-[#0F172A] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1D4ED8]"
               />
             </div>

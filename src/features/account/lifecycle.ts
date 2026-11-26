@@ -596,6 +596,6 @@ export const accountDeleteInputSchema = z.discriminatedUnion("action", [
     code: z
       .string()
       .trim()
-      .regex(/^\d{6}$/, "A 6-digit OTP code is required."),
+      .regex(/^\d{6,8}$/, "A 6 to 8 digit OTP code is required."),
   }),
 ]);
