@@ -6,10 +6,12 @@ import Script from "next/script";
 import { useSearchParams } from "next/navigation";
 import { getPublicEnv } from "@/lib/env";
 import { validateSameOriginReturnPath } from "@/lib/security/http";
+import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
 declare global {
   interface Window {
     turnstile?: {
+      ready?: (cb: () => void) => void;
       render: (
         container: HTMLElement,
         options: {
@@ -29,6 +31,7 @@ function SignInContent() {
   const returnTo = validateSameOriginReturnPath(searchParams.get("returnTo"));
   const pubEnv = getPublicEnv();
 
+  const [alreadySignedIn, setAlreadySignedIn] = useState(false);
   const [email, setEmail] = useState("");
   const [otpStep, setOtpStep] = useState<"request" | "verify">("request");
   const [otpCode, setOtpCode] = useState("");
@@ -49,22 +52,48 @@ function SignInContent() {
   useEffect(() => {
     if (typeof window === "undefined") return;
     const rawHash = window.location.hash;
-    if (!rawHash || rawHash.length <= 1) return;
-
-    const hashParams = new URLSearchParams(rawHash.slice(1));
-    const tokenHash =
-      hashParams.get("token_hash") ?? hashParams.get("invite_token");
-    if (tokenHash) {
-      setInviteTokenHash(tokenHash);
-      window.history.replaceState(
-        null,
-        document.title,
-        `${window.location.pathname}${window.location.search}`
-      );
+    if (rawHash && rawHash.length > 1) {
+      const hashParams = new URLSearchParams(rawHash.slice(1));
+      const tokenHash =
+        hashParams.get("token_hash") ?? hashParams.get("invite_token");
+      if (tokenHash) {
+        setInviteTokenHash(tokenHash);
+        window.history.replaceState(
+          null,
+          document.title,
+          `${window.location.pathname}${window.location.search}`
+        );
+        return;
+      }
     }
+
+    // Check if caller already holds an active eligible session
+    let canceled = false;
+    fetch("/api/me/session", {
+      method: "GET",
+      cache: "no-store",
+      credentials: "same-origin",
+    })
+      .then(async (res) => {
+        if (!res.ok) return { authenticated: false, eligible: false };
+        return (await res.json()) as {
+          authenticated: boolean;
+          eligible: boolean;
+        };
+      })
+      .then((s) => {
+        if (!canceled && s.authenticated && s.eligible) {
+          setAlreadySignedIn(true);
+        }
+      })
+      .catch(() => {});
+
+    return () => {
+      canceled = true;
+    };
   }, []);
 
-  // Detect if Turnstile script is already present on client-side navigation
+  // Detect Turnstile script availability
   useEffect(() => {
     if (typeof window === "undefined") return;
     if (window.turnstile) {
@@ -83,6 +112,7 @@ function SignInContent() {
   // Render Cloudflare Turnstile widget on the OTP request form
   useEffect(() => {
     if (
+      alreadySignedIn ||
       inviteTokenHash ||
       otpStep !== "request" ||
       !scriptLoaded ||
@@ -92,22 +122,58 @@ function SignInContent() {
       return;
     }
 
-    turnstileContainerRef.current.innerHTML = "";
-    widgetIdRef.current = window.turnstile.render(
-      turnstileContainerRef.current,
-      {
-        sitekey: pubEnv.NEXT_PUBLIC_TURNSTILE_SITE_KEY,
-        callback: (token: string) => setCaptchaToken(token),
-        "expired-callback": () => setCaptchaToken(""),
-        "error-callback": () => setCaptchaToken(""),
-      }
-    );
+    const mountWidget = () => {
+      if (!turnstileContainerRef.current || !window.turnstile) return;
+      turnstileContainerRef.current.innerHTML = "";
+      widgetIdRef.current = window.turnstile.render(
+        turnstileContainerRef.current,
+        {
+          sitekey: pubEnv.NEXT_PUBLIC_TURNSTILE_SITE_KEY,
+          callback: (token: string) => {
+            setCaptchaToken(token);
+            setError(null);
+          },
+          "expired-callback": () => setCaptchaToken(""),
+          "error-callback": () => {
+            setCaptchaToken("");
+            setError(
+              "Security widget could not verify this browser. Refresh the page or check browser extensions."
+            );
+          },
+        }
+      );
+    };
+
+    if (typeof window.turnstile.ready === "function") {
+      window.turnstile.ready(mountWidget);
+    } else {
+      mountWidget();
+    }
   }, [
+    alreadySignedIn,
     inviteTokenHash,
     otpStep,
     pubEnv.NEXT_PUBLIC_TURNSTILE_SITE_KEY,
     scriptLoaded,
   ]);
+
+  const handleSignOutHere = async () => {
+    setSubmitting(true);
+    try {
+      await fetch("/api/auth/signout", {
+        method: "POST",
+        credentials: "same-origin",
+      });
+      const supabase = createSupabaseBrowserClient();
+      await supabase.auth.signOut();
+    } catch {
+      // Ignore
+    } finally {
+      setAlreadySignedIn(false);
+      setSubmitting(false);
+      window.location.assign("/sign-in");
+    }
+  };
 
   const handleOtpSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -215,12 +281,55 @@ function SignInContent() {
     }
   };
 
+  if (alreadySignedIn && !inviteTokenHash) {
+    return (
+      <div className="mx-auto max-w-md space-y-5 rounded-[12px] border border-slate-200 bg-white p-6 shadow-xs">
+        <div className="space-y-1">
+          <h1 className="text-xl font-bold text-[#0F172A]">
+            You are signed in
+          </h1>
+          <p className="text-xs text-[#475569]">
+            Your invited beta session is active on this browser.
+          </p>
+        </div>
+
+        <div className="flex flex-wrap gap-2">
+          <Link
+            href="/discover"
+            className="rounded-[12px] bg-[#1D4ED8] px-4 py-2 text-xs font-semibold text-white hover:bg-blue-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1D4ED8]"
+          >
+            Browse Discover
+          </Link>
+          <Link
+            href="/my-events"
+            className="rounded-[12px] border border-[#1D4ED8] bg-white px-4 py-2 text-xs font-semibold text-[#1D4ED8] hover:bg-blue-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1D4ED8]"
+          >
+            My Events
+          </Link>
+          <button
+            type="button"
+            disabled={submitting}
+            onClick={handleSignOutHere}
+            className="rounded-[12px] border border-slate-300 bg-white px-4 py-2 text-xs font-semibold text-[#475569] hover:text-[#0F172A] disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1D4ED8]"
+          >
+            {submitting ? "Signing out..." : "Sign out"}
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="mx-auto max-w-md space-y-6 rounded-[12px] border border-slate-200 bg-white p-6 shadow-xs">
       <Script
         src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit"
         strategy="afterInteractive"
         onLoad={() => setScriptLoaded(true)}
+        onError={() =>
+          setError(
+            "Cloudflare Turnstile could not load. Please disable content blockers for this site or refresh the page."
+          )
+        }
       />
 
       <div className="space-y-1">
@@ -318,6 +427,7 @@ function SignInContent() {
 
           <div
             ref={turnstileContainerRef}
+            role="group"
             aria-label="Security verification widget"
             className="min-h-[65px]"
           />
@@ -359,7 +469,7 @@ function SignInContent() {
               required
               value={otpCode}
               onChange={(e) => setOtpCode(e.target.value)}
-              placeholder="Enter 6 or 8 digit code"
+              placeholder="Enter 6-digit code"
               className="mt-1 w-full rounded-[12px] border border-slate-300 px-3 py-2 text-sm text-[#0F172A] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1D4ED8]"
             />
           </div>

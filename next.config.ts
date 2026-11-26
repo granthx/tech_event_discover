@@ -3,6 +3,8 @@ import type { NextConfig } from "next";
 const signInCsp = [
   "default-src 'self'",
   "script-src 'self' 'unsafe-inline' https://challenges.cloudflare.com",
+  "worker-src 'self' blob:",
+  "child-src 'self' blob: https://challenges.cloudflare.com",
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data:",
   "font-src 'self'",

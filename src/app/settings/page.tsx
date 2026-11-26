@@ -18,6 +18,10 @@ export default function SettingsPage() {
     setStatusMsg(null);
     setSubmitting(true);
     try {
+      await fetch("/api/auth/signout", {
+        method: "POST",
+        credentials: "same-origin",
+      });
       const supabase = createSupabaseBrowserClient();
       await supabase.auth.signOut();
       setStatusMsg("Signed out of your session.");

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { HeaderAuthControls } from "@/components/HeaderAuthControls";
 
 export function Header() {
   return (
@@ -38,12 +39,7 @@ export function Header() {
           >
             Privacy
           </Link>
-          <Link
-            href="/sign-in"
-            className="rounded-[12px] border border-[#1D4ED8] px-3 py-1.5 text-[#1D4ED8] hover:bg-blue-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1D4ED8]"
-          >
-            Sign in
-          </Link>
+          <HeaderAuthControls />
         </nav>
       </div>
     </header>

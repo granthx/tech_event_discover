@@ -191,7 +191,19 @@ export function DiscoverClient() {
       });
 
       if (res.status === 401) {
-        router.push(`/sign-in?returnTo=${encodeURIComponent(pathname)}`);
+        // Revert optimistic toggle and perform full navigation so /sign-in receives its Turnstile CSP
+        setTrackingMap((prev) => {
+          const copy = { ...prev };
+          if (currentState) {
+            copy[eventId] = currentState;
+          } else {
+            delete copy[eventId];
+          }
+          return copy;
+        });
+        window.location.assign(
+          `/sign-in?returnTo=${encodeURIComponent(pathname)}`
+        );
         return;
       }
 

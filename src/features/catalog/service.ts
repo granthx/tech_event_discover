@@ -468,6 +468,7 @@ export async function queryDiscoverCatalog(
 
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY ?? "";
   const isPlaceholderEnv =
+    process.env.PLAYWRIGHT_TEST_MODE === "1" ||
     !serviceKey ||
     serviceKey.includes("placeholder") ||
     serviceKey.includes("test_key");
@@ -590,6 +591,7 @@ export async function getPublicEventDetailById(
 
   const pubKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ?? "";
   const isPlaceholderEnv =
+    process.env.PLAYWRIGHT_TEST_MODE === "1" ||
     !pubKey || pubKey.includes("placeholder") || pubKey.includes("test_key");
 
   if (!isPlaceholderEnv) {

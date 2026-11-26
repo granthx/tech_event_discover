@@ -24,6 +24,8 @@ export default function AdminEventsPage() {
   const [isAllDay, setIsAllDay] = useState(false);
   const [startsAt, setStartsAt] = useState("");
   const [endsAt, setEndsAt] = useState("");
+  const [startOn, setStartOn] = useState("");
+  const [endOn, setEndOn] = useState("");
   const [primarySourceSlug, setPrimarySourceSlug] = useState("foss-united");
   const [primarySourceUrl, setPrimarySourceUrl] = useState("");
 
@@ -59,18 +61,32 @@ export default function AdminEventsPage() {
           onlineIndiaAccessConfirmed: mode === "online" ? onlineConfirmed : false,
           eventTimezone,
           isAllDay,
-          startsAt: startsAt || null,
-          endsAt: endsAt || null,
+          startsAt: isAllDay ? null : startsAt || null,
+          endsAt: isAllDay ? null : endsAt || null,
+          startOn: isAllDay ? startOn || null : null,
+          endOn: isAllDay ? endOn || null : null,
           primarySourceSlug,
           primarySourceUrl: primarySourceUrl || undefined,
         }),
       });
 
-      const data = (await res.json()) as { id?: string; message?: string };
+      const data = (await res.json()) as {
+        id?: string;
+        version?: number;
+        message?: string;
+      };
       if (!res.ok) {
         setErrorMessage(data.message ?? "Failed to create draft.");
       } else {
-        setStatusMessage(`Created draft event ${data.id ?? ""}`);
+        if (data.id) {
+          setTargetEventId(data.id);
+        }
+        if (typeof data.version === "number") {
+          setExpectedVersion(data.version);
+        }
+        setStatusMessage(
+          `Created draft event ${data.id ?? ""} (version ${data.version ?? 1})`
+        );
       }
     } catch {
       setErrorMessage("Network error while creating draft.");
@@ -319,39 +335,78 @@ export default function AdminEventsPage() {
               />
             </div>
 
-            <div>
-              <label
-                htmlFor="curator-starts-at"
-                className="block text-xs font-semibold text-[#0F172A]"
-              >
-                Start timestamp (ISO 8601)
-              </label>
-              <input
-                id="curator-starts-at"
-                type="text"
-                value={startsAt}
-                onChange={(e) => setStartsAt(e.target.value)}
-                placeholder="2026-12-10T10:00:00Z"
-                className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-[#0F172A] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1D4ED8]"
-              />
-            </div>
+            {isAllDay ? (
+              <>
+                <div>
+                  <label
+                    htmlFor="curator-start-on"
+                    className="block text-xs font-semibold text-[#0F172A]"
+                  >
+                    Start date (YYYY-MM-DD)
+                  </label>
+                  <input
+                    id="curator-start-on"
+                    type="date"
+                    required
+                    value={startOn}
+                    onChange={(e) => setStartOn(e.target.value)}
+                    className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-[#0F172A] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1D4ED8]"
+                  />
+                </div>
+                <div>
+                  <label
+                    htmlFor="curator-end-on"
+                    className="block text-xs font-semibold text-[#0F172A]"
+                  >
+                    Exclusive end date (YYYY-MM-DD)
+                  </label>
+                  <input
+                    id="curator-end-on"
+                    type="date"
+                    required
+                    value={endOn}
+                    onChange={(e) => setEndOn(e.target.value)}
+                    className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-[#0F172A] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1D4ED8]"
+                  />
+                </div>
+              </>
+            ) : (
+              <>
+                <div>
+                  <label
+                    htmlFor="curator-starts-at"
+                    className="block text-xs font-semibold text-[#0F172A]"
+                  >
+                    Start timestamp (ISO 8601)
+                  </label>
+                  <input
+                    id="curator-starts-at"
+                    type="text"
+                    value={startsAt}
+                    onChange={(e) => setStartsAt(e.target.value)}
+                    placeholder="2026-12-10T10:00:00Z"
+                    className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-[#0F172A] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1D4ED8]"
+                  />
+                </div>
 
-            <div>
-              <label
-                htmlFor="curator-ends-at"
-                className="block text-xs font-semibold text-[#0F172A]"
-              >
-                End timestamp (optional)
-              </label>
-              <input
-                id="curator-ends-at"
-                type="text"
-                value={endsAt}
-                onChange={(e) => setEndsAt(e.target.value)}
-                placeholder="Leave blank if unknown"
-                className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-[#0F172A] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1D4ED8]"
-              />
-            </div>
+                <div>
+                  <label
+                    htmlFor="curator-ends-at"
+                    className="block text-xs font-semibold text-[#0F172A]"
+                  >
+                    End timestamp (optional)
+                  </label>
+                  <input
+                    id="curator-ends-at"
+                    type="text"
+                    value={endsAt}
+                    onChange={(e) => setEndsAt(e.target.value)}
+                    placeholder="Leave blank if unknown"
+                    className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-[#0F172A] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1D4ED8]"
+                  />
+                </div>
+              </>
+            )}
           </div>
 
           <div className="flex items-center gap-2">

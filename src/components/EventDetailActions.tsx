@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 import type { TrackingState } from "@/lib/database.types";
 
 export interface EventDetailActionsProps {
@@ -15,7 +14,6 @@ export function EventDetailActions({
   eventTitle,
   isPublishedAndActive,
 }: EventDetailActionsProps) {
-  const router = useRouter();
   const [trackingState, setTrackingState] = useState<TrackingState | null>(null);
   const [updating, setUpdating] = useState(false);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
@@ -58,7 +56,9 @@ export function EventDetailActions({
 
       if (res.status === 401) {
         setTrackingState(previousState);
-        router.push(`/sign-in?returnTo=${encodeURIComponent(`/events/${eventId}`)}`);
+        window.location.assign(
+          `/sign-in?returnTo=${encodeURIComponent(`/events/${eventId}`)}`
+        );
         return;
       }
 

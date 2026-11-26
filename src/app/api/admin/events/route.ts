@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { REFERENCE_CITIES } from "@/features/catalog/fixtures";
 import { adminCreateEventInputSchema } from "@/features/curation/lifecycle";
 import { normalizeSourceUrl } from "@/features/curation/url-normalization";
 import { getServerEnv } from "@/lib/env";
@@ -35,11 +36,29 @@ export async function POST(request: Request) {
   }
 
   const input = parsed.data;
+  let normalizedSource: { publicUrl: string; urlKey: string } | null = null;
   if (input.primarySourceUrl) {
     const normalized = normalizeSourceUrl(input.primarySourceUrl);
     if (!normalized.ok) {
       return jsonError(400, "INVALID_REQUEST", normalized.message);
     }
+    normalizedSource = {
+      publicUrl: normalized.publicUrl,
+      urlKey: normalized.urlKey,
+    };
+  }
+
+  let resolvedCityId: string | null = null;
+  if (input.mode !== "online" && input.citySlug) {
+    const cityMatch = REFERENCE_CITIES.find((c) => c.slug === input.citySlug);
+    if (!cityMatch) {
+      return jsonError(
+        400,
+        "INVALID_REQUEST",
+        `Unknown Indian venue city: ${input.citySlug}`
+      );
+    }
+    resolvedCityId = cityMatch.id;
   }
 
   const pubKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ?? "";
@@ -64,21 +83,22 @@ export async function POST(request: Request) {
       p_event_type: input.eventType,
       p_mode: input.mode,
       p_price_status: input.priceStatus,
+      p_city_id: resolvedCityId,
       p_venue: input.venue ?? null,
       p_online_india_access_confirmed: input.onlineIndiaAccessConfirmed,
       p_event_timezone: input.eventTimezone,
       p_is_all_day: input.isAllDay,
-      p_starts_at: input.startsAt ?? null,
-      p_ends_at: input.endsAt ?? null,
-      p_start_on: input.startOn ?? null,
-      p_end_on: input.endOn ?? null,
+      p_starts_at: input.isAllDay ? null : input.startsAt ?? null,
+      p_ends_at: input.isAllDay ? null : input.endsAt ?? null,
+      p_start_on: input.isAllDay ? input.startOn ?? null : null,
+      p_end_on: input.isAllDay ? input.endOn ?? null : null,
       p_registration_deadline_at: input.registrationDeadlineAt ?? null,
       p_registration_deadline_on: input.registrationDeadlineOn ?? null,
     } as never
   );
 
-  if (error) {
-    const msg = error.message ?? "";
+  if (error || !eventId) {
+    const msg = error?.message ?? "";
     if (msg.includes("CURATOR_UNAUTHENTICATED")) {
       return jsonError(401, "UNAUTHENTICATED", "Authentication required.");
     }
@@ -104,8 +124,37 @@ export async function POST(request: Request) {
     return jsonError(400, "INVALID_REQUEST", "Unable to create draft event.");
   }
 
+  let currentVersion = 1;
+  if (normalizedSource && input.primarySourceSlug) {
+    const { data: nextVer, error: srcError } = await supabase.rpc(
+      "curator_set_event_source" as never,
+      {
+        p_event_id: eventId,
+        p_expected_version: 1,
+        p_source_slug: input.primarySourceSlug,
+        p_public_url: normalizedSource.publicUrl,
+        p_url_key: normalizedSource.urlKey,
+        p_is_primary: true,
+        p_reason_code: "initial_primary_source",
+      } as never
+    );
+
+    if (srcError) {
+      const sMsg = srcError.message ?? "";
+      if (sMsg.includes("SOURCE_URL_CONFLICT")) {
+        return jsonError(
+          409,
+          "SOURCE_URL_CONFLICT",
+          `Draft ${String(eventId)} created (v1), but the source URL is already claimed by another active event.`
+        );
+      }
+    } else if (typeof nextVer === "number") {
+      currentVersion = nextVer;
+    }
+  }
+
   return NextResponse.json(
-    { id: eventId, status: "draft", version: 1 },
+    { id: eventId, status: "draft", version: currentVersion },
     {
       status: 201,
       headers: { "Cache-Control": "private, no-store" },
