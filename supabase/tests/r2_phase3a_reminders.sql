@@ -19,7 +19,7 @@ BEGIN;
 CREATE EXTENSION IF NOT EXISTS pgtap WITH SCHEMA extensions;
 SET search_path TO public, extensions;
 
-SELECT plan(50);
+SELECT plan(61);
 
 -- Clean fixture tables inside rolled-back test transaction
 DELETE FROM public.reminder_suppressions;
@@ -589,23 +589,32 @@ SELECT is(
 );
 
 -- Worker 2 finalizes attempt_count = 2 as accepted -> clears pending_payload!
+SELECT is(
+  public.finalize_reminder_delivery_attempt(
+    current_setting('test.delivery_id')::uuid,
+    2,
+    'accepted',
+    true,
+    're_msg_accepted_1',
+    NULL,
+    NULL,
+    '2026-12-09T00:02:15Z'
+  ),
+  true,
+  'attempt 2 finalizes accepted returning true'
+);
+
 SELECT results_eq(
   format(
     $$
-      WITH fin AS (
-        SELECT public.finalize_reminder_delivery_attempt(
-          %L::uuid, 2, 'accepted', true, 're_msg_accepted_1', NULL, NULL, '2026-12-09T00:02:15Z'
-        ) AS ok
-      )
-      SELECT (SELECT ok FROM fin), rd.status, rd.pending_payload IS NULL, rd.provider_message_id
-      FROM public.reminder_deliveries rd, fin
+      SELECT rd.status, rd.pending_payload IS NULL, rd.provider_message_id
+      FROM public.reminder_deliveries rd
       WHERE rd.id = %L::uuid
     $$,
-    current_setting('test.delivery_id'),
     current_setting('test.delivery_id')
   ),
-  $$VALUES (true, 'accepted'::text, true, 're_msg_accepted_1'::text)$$,
-  'attempt 2 finalizes accepted and clears temporary pending_payload'
+  $$VALUES ('accepted'::text, true, 're_msg_accepted_1'::text)$$,
+  'attempt 2 finalization persists accepted status and clears temporary pending_payload'
 );
 
 -- =============================================================================
@@ -628,16 +637,15 @@ RESET ROLE;
 -- Clicking old v1 unsubscribe token ('digest-unsub-v1', issued at consent_version_at_send = 1)
 -- MUST return 204 preserved_newer_consent and keep email_reminders_enabled = true!
 SELECT results_eq(
-  $$
-    WITH unsub AS (
-      SELECT * FROM public.apply_reminder_unsubscribe_token('digest-unsub-v1', '2026-12-09T02:00:00Z')
-    )
-    SELECT u.http_status, u.outcome, up.email_reminders_enabled, up.consent_version
-    FROM unsub u
-    JOIN public.user_preferences up ON up.user_id = 'aaaaaaaa-1111-4111-8111-111111111101'
-  $$,
-  $$VALUES (204, 'preserved_newer_consent'::text, true, 3::bigint)$$,
-  'old_unsubscribe_token_cannot_revoke_new_consent: old v1 token preserves newer v3 opt-in'
+  $$SELECT http_status, outcome FROM public.apply_reminder_unsubscribe_token('digest-unsub-v1', '2026-12-09T02:00:00Z')$$,
+  $$VALUES (204, 'preserved_newer_consent'::text)$$,
+  'old_unsubscribe_token_cannot_revoke_new_consent: old v1 token returns 204 preserved_newer_consent'
+);
+
+SELECT results_eq(
+  $$SELECT email_reminders_enabled, consent_version FROM public.user_preferences WHERE user_id = 'aaaaaaaa-1111-4111-8111-111111111101'$$,
+  $$VALUES (true, 3::bigint)$$,
+  'old_unsubscribe_token_cannot_revoke_new_consent: newer v3 opt-in remains enabled'
 );
 
 -- Invalid unsubscribe token returns 400
@@ -662,49 +670,57 @@ SELECT is(
 
 -- Matched permanent bounce records +90d suppression; replaying an earlier expiry keeps later GREATEST expiry!
 SELECT results_eq(
-  $$
-    WITH first_sup AS (
-      SELECT * FROM public.record_webhook_suppression(
-        're_msg_accepted_1', 'user-a@example.org', 'digest-secret-key-0000000000000000',
-        'permanent_bounce', '2027-03-15T00:00:00Z', '2026-12-09T03:01:00Z'
-      )
-    ),
-    replay_earlier AS (
-      SELECT * FROM public.record_webhook_suppression(
-        're_msg_accepted_1', 'user-a@example.org', 'digest-secret-key-0000000000000000',
-        'permanent_bounce', '2027-03-01T00:00:00Z', '2026-12-09T03:02:00Z'
-      )
-    )
-    SELECT f.http_status, r.outcome, rs.expires_at
-    FROM first_sup f, replay_earlier r, public.reminder_suppressions rs
-    WHERE rs.user_id = 'aaaaaaaa-1111-4111-8111-111111111101'
-  $$,
-  $$VALUES (200, 'suppressed'::text, '2027-03-15T00:00:00Z'::timestamptz)$$,
+  $$SELECT http_status, outcome FROM public.record_webhook_suppression(
+    're_msg_accepted_1', 'user-a@example.org', 'digest-secret-key-0000000000000000',
+    'permanent_bounce', '2027-03-15T00:00:00Z', '2026-12-09T03:01:00Z'
+  )$$,
+  $$VALUES (200, 'suppressed'::text)$$,
+  'first permanent bounce webhook records suppression'
+);
+
+SELECT results_eq(
+  $$SELECT http_status, outcome FROM public.record_webhook_suppression(
+    're_msg_accepted_1', 'user-a@example.org', 'digest-secret-key-0000000000000000',
+    'permanent_bounce', '2027-03-01T00:00:00Z', '2026-12-09T03:02:00Z'
+  )$$,
+  $$VALUES (200, 'suppressed'::text)$$,
+  'replayed permanent bounce webhook with older timestamp succeeds'
+);
+
+SELECT is(
+  (SELECT expires_at FROM public.reminder_suppressions WHERE user_id = 'aaaaaaaa-1111-4111-8111-111111111101'),
+  '2027-03-15T00:00:00Z'::timestamptz,
   'suppression replay preserves later stored expires_at monotonically'
 );
 
 -- Single-run 120s job bearer: first consume succeeds, replay fails (false)
-SELECT results_eq(
+SELECT lives_ok(
   $$
-    WITH created AS (
-      SELECT public.create_scheduled_job_run(
+    SELECT set_config(
+      'test.job_run_id',
+      public.create_scheduled_job_run(
         'reminders', '2026-12-09T04:00:00Z', 'bearer-digest-1', '2026-12-09T04:00:00Z'
-      ) AS run_id
-    ),
-    first_try AS (
-      SELECT public.consume_job_run_bearer(
-        (SELECT run_id FROM created), 'reminders', 'bearer-digest-1', '2026-12-09T04:00:05Z'
-      ) AS ok1
-    ),
-    replay_try AS (
-      SELECT public.consume_job_run_bearer(
-        (SELECT run_id FROM created), 'reminders', 'bearer-digest-1', '2026-12-09T04:00:06Z'
-      ) AS ok2
+      )::text,
+      true
     )
-    SELECT (SELECT ok1 FROM first_try), (SELECT ok2 FROM replay_try)
   $$,
-  $$VALUES (true, false)$$,
-  'single-run job bearer succeeds once and rejects replay'
+  'create_scheduled_job_run creates reminders run row'
+);
+
+SELECT is(
+  public.consume_job_run_bearer(
+    current_setting('test.job_run_id')::uuid, 'reminders', 'bearer-digest-1', '2026-12-09T04:00:05Z'
+  ),
+  true,
+  'single-run job bearer succeeds on first consumption within 120s'
+);
+
+SELECT is(
+  public.consume_job_run_bearer(
+    current_setting('test.job_run_id')::uuid, 'reminders', 'bearer-digest-1', '2026-12-09T04:00:06Z'
+  ),
+  false,
+  'single-run job bearer rejects replay after consumption'
 );
 
 -- Auth user deletion cascades user_preferences, reminder_deliveries, and reminder_suppressions
