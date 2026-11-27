@@ -1282,15 +1282,15 @@ AS $$
         AND p_now < rd.expires_at
         AND (rd.next_attempt_at IS NULL OR rd.next_attempt_at <= p_now)
     ) AS oldest_actionable_due_at,
-    COUNT(*)::integer FILTER (
+    COUNT(*) FILTER (
       WHERE rd.status IN ('pending', 'retry', 'leased')
         AND rd.due_at <= p_now - interval '10 minutes'
         AND p_now < rd.expires_at
         AND (rd.next_attempt_at IS NULL OR rd.next_attempt_at <= p_now)
-    ) AS actionable_backlog_over_10m_count,
-    COUNT(*)::integer FILTER (
+    )::integer AS actionable_backlog_over_10m_count,
+    COUNT(*) FILTER (
       WHERE rd.status = 'unknown'
-    ) AS unknown_outcome_count
+    )::integer AS unknown_outcome_count
   FROM public.reminder_deliveries rd;
 $$;
 
