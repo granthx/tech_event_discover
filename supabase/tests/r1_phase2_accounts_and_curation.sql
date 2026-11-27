@@ -16,7 +16,7 @@ BEGIN;
 CREATE EXTENSION IF NOT EXISTS pgtap WITH SCHEMA extensions;
 SET search_path TO public, extensions;
 
-SELECT plan(24);
+SELECT plan(27);
 
 -- Clean fixture tables inside rolled-back test transaction
 DELETE FROM public.curator_audit;
@@ -477,52 +477,55 @@ SELECT set_config(
   true
 );
 
--- Archive the event (v8 -> v9) and verify:
--- 1) archived_url_keys is recorded in curator_audit
--- 2) competing event can now claim the released url_key
--- 3) existing user_events tracking row is preserved
+-- Archive the event (v8 -> v9) and verify sequentially:
+-- 1) archive succeeds and increments version to 9
+-- 2) competing event can now claim the released url_key (v1 -> v2)
+-- 3) archived_url_keys is recorded in private curator_audit & existing user_events row is preserved
+SELECT is(
+  public.curator_transition_event_status(
+    current_setting('test.event_id')::uuid,
+    8,
+    'archive',
+    NULL,
+    'archived_after_event',
+    '2026-12-01T10:15:00Z'::timestamptz
+  ),
+  9::bigint,
+  'archive_releases_url_and_preserves_tracking: archive transitions published -> archived (v9)'
+);
+
+SELECT is(
+  public.curator_set_event_source(
+    current_setting('test.competing_event_id')::uuid,
+    1,
+    'foss-united',
+    'https://fossunited.org/events/p2-1',
+    'https://fossunited.org/events/p2-1',
+    true,
+    'reclaimed_after_archive',
+    '2026-12-01T10:16:00Z'::timestamptz
+  ),
+  2::bigint,
+  'archive_releases_url_and_preserves_tracking: competing event reclaims released url_key after archive'
+);
+
+-- Inspect private curator_audit and preserved user_events row as owner role
+RESET ROLE;
 SELECT results_eq(
   format(
     $$
-      WITH archived AS (
-        SELECT public.curator_transition_event_status(
-          %L::uuid,
-          8,
-          'archive',
-          NULL,
-          'archived_after_event',
-          '2026-12-01T10:15:00Z'::timestamptz
-        ) AS ver
-      ),
-      reclaimed AS (
-        SELECT public.curator_set_event_source(
-          %L::uuid,
-          1,
-          'foss-united',
-          'https://fossunited.org/events/p2-1',
-          'https://fossunited.org/events/p2-1',
-          true,
-          'reclaimed_after_archive',
-          '2026-12-01T10:16:00Z'::timestamptz
-        ) AS comp_ver
-      )
       SELECT
-        (SELECT ver FROM archived),
-        (SELECT comp_ver FROM reclaimed),
         (SELECT archived_url_keys FROM public.curator_audit WHERE target_id = %L AND action = 'archive' LIMIT 1),
         (SELECT count(*)::int FROM public.user_events WHERE event_id = %L::uuid)
     $$,
     current_setting('test.event_id'),
-    current_setting('test.competing_event_id'),
-    current_setting('test.event_id'),
     current_setting('test.event_id')
   ),
-  $$VALUES (9::bigint, 2::bigint, ARRAY['https://fossunited.org/events/p2-1']::text[], 1)$$,
-  'archive_releases_url_and_preserves_tracking: archive records archived_url_keys in audit, releases url_key for new event, and preserves tracking row'
+  $$VALUES (ARRAY['https://fossunited.org/events/p2-1']::text[], 1)$$,
+  'archive_releases_url_and_preserves_tracking: archive records archived_url_keys in audit and preserves tracking row'
 );
 
 -- Revoke curator_access while JWT session is still aal2 -> next request is denied
-RESET ROLE;
 UPDATE public.curator_access
    SET active = false,
        updated_at = now()
